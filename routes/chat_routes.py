@@ -16,6 +16,7 @@ from core.models import ChatMessage
 from src.request_models import ChatRequest
 from src.llm_core import llm_call_async, stream_llm, stream_llm_with_fallback
 from src.agent_loop import stream_agent_loop
+from src.pi_backend import stream_pi_agent
 from src import agent_runs
 from src.model_context import estimate_tokens
 from src.chat_helpers import coerce_message_and_session
@@ -45,6 +46,46 @@ logger = logging.getLogger(__name__)
 # Track active streams for partial-save safety net
 _active_streams: Dict[str, dict] = {}
 _IMAGE_MODEL_PREFIXES = ("gpt-image", "dall-e", "chatgpt-image")
+
+
+def _start_pi_stream(request, session_manager, sess, session, message, owner):
+    """Dispatch a turn to the embedded pi agent backend (Gain #1).
+
+    Admin-only in v1. Mints a per-session token scoped to memory r/w, points pi
+    at the session's (OpenAI-compatible) model endpoint, and streams pi's
+    translated events through the same detached-run machinery the native loop
+    uses (so stop/resume work unchanged)."""
+    from core.middleware import require_admin
+    from routes.api_token_routes import mint_api_token
+
+    require_admin(request)  # v1 scope: admin-only
+    set_session_mode(session, "pi")
+
+    token = mint_api_token(owner, scopes=["memory:read", "memory:write"],
+                           name=f"pi-session:{session[:8]}")
+    try:  # let the auth middleware pick up the new token immediately
+        invalidate = getattr(request.app.state, "invalidate_token_cache", None)
+        if invalidate:
+            invalidate()
+    except Exception:
+        pass
+
+    base = _normalize_base(getattr(sess, "endpoint_url", "") or "")
+    model_base_url = base if base.endswith("/v1") else (base.rstrip("/") + "/v1")
+    odysseus_url = str(request.base_url).rstrip("/")
+
+    gen = stream_pi_agent(
+        session_id=session,
+        message=message,
+        sess=sess,
+        session_manager=session_manager,
+        model_id=getattr(sess, "model", "") or "",
+        model_base_url=model_base_url,
+        api_token=token["token"],
+        odysseus_url=odysseus_url,
+    )
+    agent_runs.start(session, gen)
+    return StreamingResponse(agent_runs.subscribe(session), media_type="text/event-stream")
 
 
 def _stream_set(session_id: str, **fields) -> None:
@@ -490,6 +531,13 @@ def setup_chat_routes(
             if get_session_mode(session) == 'research_pending':
                 do_research = True
                 logger.info(f"Session {session} in research_pending — auto-triggering research")
+
+        # Embedded pi agent backend (Gain #1): a session whose stored mode is
+        # "pi" (or an explicit mode=pi form param) is driven by a pi RPC
+        # subprocess instead of the native loop. Short-circuit before the native
+        # setup; the pi backend streams through the same agent_runs machinery.
+        if chat_mode == 'pi' or get_session_mode(session) == 'pi':
+            return _start_pi_stream(request, session_manager, sess, session, message, owner)
 
         # Persist session mode (research > agent > chat)
         _effective_mode = 'research' if do_research else (chat_mode or 'chat')
