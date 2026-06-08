@@ -69,6 +69,49 @@ def _normalize_scopes(scopes: str | list[str] | None = None, profile: str | None
     return normalized or [DEFAULT_SCOPES]
 
 
+def mint_api_token(
+    owner: str,
+    scopes: str | list[str] | None = None,
+    profile: str | None = None,
+    name: str = "",
+) -> dict:
+    """Create and persist an API token; return the raw token + metadata.
+
+    Request/HTTP-free so it can be called in-process — e.g. when Odysseus
+    spawns an embedded pi agent session and needs to hand it a scoped token.
+    Callers that hold a Request should invalidate the auth middleware's token
+    cache afterward via ``request.app.state.invalidate_token_cache()`` (the
+    HTTP route below does this); without it the new token is still honored on
+    the next request, because the middleware lazily refreshes when dirty."""
+    name = (name or "").strip()[:MAX_NAME_LEN] or "token"
+    scope_list = _normalize_scopes(scopes, profile)
+    scopes_value = ",".join(scope_list)
+
+    raw_token = "ody_" + secrets.token_urlsafe(32)
+    token_hash = bcrypt.hashpw(raw_token.encode(), bcrypt.gensalt()).decode()
+    token_id = str(uuid.uuid4())[:8]
+
+    with get_db_session() as db:
+        db.add(ApiToken(
+            id=token_id,
+            owner=owner,
+            name=name,
+            token_hash=token_hash,
+            token_prefix=raw_token[:8],
+            scopes=scopes_value,
+            is_active=True,
+        ))
+
+    return {
+        "id": token_id,
+        "name": name,
+        "owner": owner,
+        "token": raw_token,
+        "token_prefix": raw_token[:8],
+        "scopes": scope_list,
+    }
+
+
 def setup_api_token_routes() -> APIRouter:
     router = APIRouter(prefix="/api", tags=["api_tokens"])
 
@@ -120,33 +163,9 @@ def setup_api_token_routes() -> APIRouter:
         if not name:
             raise HTTPException(400, "Token name is required")
         owner = get_current_user(request)
-        scope_list = _normalize_scopes(scopes, profile)
-        scopes_value = ",".join(scope_list)
-
-        raw_token = "ody_" + secrets.token_urlsafe(32)
-        token_hash = bcrypt.hashpw(raw_token.encode(), bcrypt.gensalt()).decode()
-        token_id = str(uuid.uuid4())[:8]
-
-        with get_db_session() as db:
-            db.add(ApiToken(
-                id=token_id,
-                owner=owner,
-                name=name,
-                token_hash=token_hash,
-                token_prefix=raw_token[:8],
-                scopes=scopes_value,
-                is_active=True,
-            ))
+        result = mint_api_token(owner, scopes=scopes, profile=profile, name=name)
         _invalidate_cache(request)
-
-        return {
-            "id": token_id,
-            "name": name,
-            "owner": owner,
-            "token": raw_token,
-            "token_prefix": raw_token[:8],
-            "scopes": scope_list,
-        }
+        return result
 
     @router.patch("/tokens/{token_id}")
     async def update_token(request: Request, token_id: str):

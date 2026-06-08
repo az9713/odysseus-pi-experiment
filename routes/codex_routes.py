@@ -87,6 +87,7 @@ def setup_codex_routes(
     email_draft_endpoint = _find_endpoint(email_router, "POST", "/api/email/draft")
     memory_list_endpoint = _find_endpoint(memory_router, "GET", "/api/memory")
     memory_add_endpoint = _find_endpoint(memory_router, "POST", "/api/memory/add")
+    memory_search_endpoint = _find_endpoint(memory_router, "POST", "/api/memory/search")
     calendar_list_events = _find_endpoint(calendar_router, "GET", "/api/calendar/events")
     calendar_create_event = _find_endpoint(calendar_router, "POST", "/api/calendar/events")
     documents_library_endpoint = _find_endpoint(document_router, "GET", "/api/documents/library")
@@ -117,7 +118,7 @@ def setup_codex_routes(
                 "memory": {
                     "read": scoped(MEMORY_READ_SCOPES),
                     "write": scoped(MEMORY_WRITE_SCOPES),
-                    "actions": ["list", "add", "delete"],
+                    "actions": ["list", "search", "add", "delete"],
                     "available": memory_list_endpoint is not None,
                 },
                 "calendar": {
@@ -290,6 +291,34 @@ def setup_codex_routes(
         if not memory_data.text:
             raise HTTPException(400, "Empty memory text")
         return await _as_owner(request, owner, memory_add_endpoint, request, memory_data)
+
+    @router.post("/memory/search")
+    async def codex_memory_search(request: Request, body: dict[str, Any] = Body(default_factory=dict)):
+        """Ranked memory retrieval for a query — reuses the same relevance
+        scorer the in-app search uses (memory_manager.get_relevant_memories),
+        so external agents recall memories the way Odysseus itself does."""
+        owner = _scope_owner(request, MEMORY_READ_SCOPES)
+        if memory_search_endpoint is None:
+            raise HTTPException(503, "Memory integration is not available")
+        query = str(body.get("query") or "").strip()
+        if not query:
+            raise HTTPException(400, "Empty search query")
+        try:
+            k = int(body.get("k") or 8)
+        except (TypeError, ValueError):
+            k = 8
+        result = await _as_owner(
+            request, owner, memory_search_endpoint,
+            request,
+            query=query,
+            session_id=body.get("session_id"),
+            category=body.get("category"),
+        )
+        # The underlying endpoint ranks then caps at 20; honor the caller's k.
+        if isinstance(result, dict) and isinstance(result.get("memories"), list):
+            result["memories"] = result["memories"][:k]
+            result["total"] = len(result["memories"])
+        return result
 
     # ── Calendar ──────────────────────────────────────────────────────────
 
