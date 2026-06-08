@@ -1,0 +1,1093 @@
+ pleaes come up with an implementation plan for Gain #1. do you have enough      info to implement #1
+
+● This is the right moment to be honest before planning: No — I don't yet have
+  enough to implement Gain #1 confidently. The assessment was grounded in docs;
+  an implementation plan needs to be grounded in the actual API surface and       integration points, plus two things the report explicitly left open
+  (small-model tool-calling, the detached learning loop). Let me close those
+  gaps by exploring the real code, then write a plan that's explicit about
+  what's verified vs. what needs a spike.
+
+  Launching three parallel Explore agents to ground the plan:
+
+● 3 background agents launched (↓ to manage)
+   ├ codex-api-explorer: Map Odysseus /api/codex bridge target
+   ├ session-stream-explorer: Map Odysseus session/stream/process internals        └ pi-reality-checker: Verify pi RPC client and extension reality
+
+● Three Explore agents are now grounding the plan against real code:
+
+  1. /api/codex/* bridge target — exact endpoints, scopes, and crucially whether  memory supports write (Gain #1 needs the agent to record what it learns about
+  you), plus how to mint a scoped token in-code.
+  2. Session / streaming / process internals — the SSE format and frontend
+  consumer (how invasive a new backend's stream is), the Session DB model, and
+  the reusable subprocess-lifecycle infra to spawn pi --mode rpc.
+  3. pi reality check — verifying the RPC client/extension API in actual code
+  (not just docs), confirming --tools truly excludes built-ins, and whether pi
+  is installable/runnable here.
+
+  While they run, my honest answer to "do you have enough info?" stands: not
+  yet, but I will once these land — with one risk that no amount of code-reading
+  can settle, only a runtime spike:
+
+  ★ Insight ─────────────────────────────────────
+  The decisive unknown for Gain #1 is whether your local models can actually
+  drive pi's native tool-calling loop. Odysseus's loop was built to tolerate
+  weak models (regex-parsed tool blocks + teacher escalation); pi assumes
+  provider-native function calls. If a 7B GGUF can't reliably emit clean tool
+  calls to pi, then Gain #1 — long-horizon agent that knows you — would only
+  work on API/large models, which dents the local-first premise. This is
+  empirical: it can't be read out of either repo, so the plan will front-load it
+  as a go/no-go spike before any bridge code.
+  ─────────────────────────────────────────────────
+
+  I'll write the plan to the plan file once all three reports are in, then
+  confirm remaining choices with you before finalizing.
+
+✻ -aMemory: read/add/delete all availables(routes/codex_routes.py:267-354) — no
+  update, but delete+re-add covers it. Sufficient for "the agent records what it
+※ learns about you."how to implement Gain #1, a long-horizon agent that knows
+  - Two real gaps that touch Gain #1's headline use case: document update isn't
+  exposed (only create/read/delete) — yet "maintain a running summary doc" was
+  the example task. And web_search/web_fetch aren't in /api/codex/*
+  (session-only). Both will be flagged in the plan with workarounds.
+● -gToken minting is REST-only via an admin sessionpleted · 5m 25s
+  (routes/api_token_routes.py:111-149) — there's no in-code mint helper, so the
+* planomustgaddressihowsaoper-session5scoped token8getsecreated and injected at
+  spawn.
+──────────────────────────────────────────────────────────────────── odysseus ──
+  Waiting on the session/streaming/lifecycle and pi-reality reports before
+  writing─the─plan.─────────────────────────────────────────────────────────────
+
+✻ Waiting for 1 background agent to finish
+
+● Agent "Verify pi RPC client and extension reality" completed · 5m 12s
+
+● Pi reality check confirms docs match code exactly — no surprises, which
+  de-risks the pi side substantially:
+                                                                                  - --tools/--no-tools genuinely filter built-ins at registration                 (sdk.ts:244-250, agent-session.ts:2285) — the security gate is real, not        aspirational.
+  - pi.registerTool({...async execute...}) with HTTP calls — concrete template
+  at examples/extensions/dynamic-tools.ts:24-74.
+  - The memory-injection seam is confirmed: before_agent_start returns
+  {systemPrompt} to rewrite the prompt per turn
+  (examples/extensions/prompt-customizer.ts:86-96) — exactly how "inject what we  know about you" works.
+  - Install: npm @earendil-works/pi-coding-agent, Node ≥22.19, bin pi (from this
+  source tree needs npm run build first).
+
+  One report left — the Odysseus session/streaming/process-lifecycle internals
+  (the seam where a pi-backed session plugs into the existing UI). Once it lands
+  I'll write the plan.
+
+✻ Waiting for 1 background agent to finish
+
+※ recap: Goal: plan how to embed pi as Odysseus's long-horizon general agent
+  (Gain #1). Two of three code-exploration agents are done; waiting on the last   one mapping Odysseus's session/streaming/process internals, then I'll write
+  the implementation plan.
+
+● Agent "Map Odysseus session/stream/process internals" completed · 15m 13s
+
+● All three reports are in and consistent. Before writing the plan, let me
+  verify the three load-bearing seams with my own eyes (the dispatch point, the
+  detached-run API I'd reuse, and whether token-minting is callable in-code):
+
+  Read 1 file (ctrl+o to expand)
+
+● agent_runs is fully backend-agnostic — it drains any async generator of SSE
+  strings via start(session_id, agen) / subscribe / stop. My pi backend just
+  needs to be such a generator. Now the dispatch seam and the token mint:
+
+  Read 2 files (ctrl+o to expand)
+
+● Both seams confirmed exactly as reported:
+  - Dispatch (chat_routes.py:494-497): mode is decided here; a "pi" branch
+  builds the pi async-generator and hands it to agent_runs.start() instead of
+  the native loop — clean insertion.
+  - Token mint (api_token_routes.py:111-149): minting is ~15 lines
+  (_normalize_scopes → secrets.token_urlsafe → bcrypt → insert ApiToken);
+  extracting an in-code mint_api_token(owner, scopes, name) helper is a trivial
+  refactor.
+
+  My honest answer: yes — I now have enough to implement Gain #1. The
+  architecture is fully grounded; every seam is verified in real code. The one
+  thing no amount of reading can settle is whether your local models reliably
+  drive pi's native tool-calling — that's an empirical spike, not a planning
+  blocker.
+
+  Three decisions shape the plan's scope. Let me get your calls before
+  finalizing:
+────────────────────────────────────────────────────────────────────────────────Planning: C:\Users\simon\.claude\plans\pleaes-come-up-with-cosmic-tome.md
+────────────────────────────────────────────────────────────────────────────────←  [ ] Scope  [ ] Local models  [ ] v1 surface  √ Submit  →
+
+Who should the embedded pi agent serve in v1?
+
+> 1. Admin-only (you) first
+     Simplest. pi spawned for admin sessions; can include host tools
+     (bash/read/write/edit) since admins already have them. Token minting
+     trivial. Matches the report's B′4 Phase 1. Multi-user comes later.
+  2. Multi-user from the start
+     Every user gets a capability-stripped pi (no host tools), each with a
+     per-user scoped ody_ token. More token-lifecycle and gating work up front,
+     but delivers the full role-contract vision immediately.
+  3. Type something.
+────────────────────────────────────────────────────────────────────────────────
+  4. Chat about this
+
+Enter to select · Tab/Arrow keys to navigate · Esc to cancel
+
+───────────────────────────────────────────────────────────────────────────────←  [×] Scope  [ ] Local models  [ ] v1 surface  √ Submit  →
+
+Is reliable operation on small LOCAL models a hard requirement for v1?
+
+  1. API-first; local is best-effort
+     Build for strong tool-calling models (Claude/GPT/large local). Run the
+     spike to characterize how small local models behave, but don't block v1 on
+     them. Lowest risk.
+> 2. Local models are mandatory
+     v1 must work on small local GGUFs. The spike becomes a go/no-go gate; if
+     pi's native tool-calling is unreliable on them, we design a fallback (e.g.
+     keep Odysseus's native loop for weak models, pi for strong ones) before
+     building.
+  3. Type something.
+────────────────────────────────────────────────────────────────────────────────
+  4. Chat about this
+
+Enter to select · Tab/Arrow keys to navigate · Esc to cancel
+
+Which capabilities must the v1 agent be able to touch? (Memory is the 'knows
+you' core.)
+
+> 1. [√] Memory (read + write)
+  The core of Gain #1 — agent recalls and records facts about you. Needs a new
+  hybrid-search endpoint (current API only lists all memories; Odysseus's
+  ranking in chat_processor.py isn't exposed).
+  2. [ ] Todos + Calendar
+  Reminders and scheduling. Fully covered by existing /api/codex/* endpoints
+  (calendar update not exposed, but create/delete is).
+  3. [ ] Email (read + draft/send)
+  Inbox triage and replies. Read/draft/send exist; reply/bulk/archive do NOT
+  (would need new endpoints).
+  4. [ ] Documents (incl. update)
+  The 'maintain a running summary doc' use case. Create/read/delete exist but
+  UPDATE is not exposed — needs a new PUT endpoint to be useful.
+  5. [ ] Type something
+     Submit
+────────────────────────────────────────────────────────────────────────────────
+  6. Chat about this
+
+Enter t
+
+ [×] Scope  [×] Local models  [×] v1 surface  √ Submit  →
+
+Review your answers
+
+ ● Who should the embedded pi agent serve in v1?
+   → Admin-only (you) first
+ ● Is reliable operation on small LOCAL models a hard requirement for v1?
+   → Local models are mandatory
+ ● Which capabilities must the v1 agent be able to touch? (Memory is the 'knows
+   you' core.)
+   → Memory (read + write)
+
+Ready to submit your answers?
+
+> 1. Submit answers
+  2. Cancel
+
+
+ User answered Claude's questions:
+  ⎿  · Who should the embedded pi agent serve in v1? → Admin-only (you) first
+     · Is reliable operation on small LOCAL models a hard requirement for v1? →      Local models are mandatory
+     · Which capabilities must the v1 agent be able to touch? (Memory is the
+     'knows you' core.) → Memory (read + write)
+
+✻ Flibbertigibbeting… (3m 51s · ↑ 7.9k tokens)
+
+──────────────────────────────────────────────────────────────────── odysseus ──
+> 
+────────────────────────────────────────────────────────────────────────────────
+  | Opus 4.8 (1M context) | odysseus-dev | ctx 22% | 5h 21% | 7d 29% |
+  ⏸ plan mode on (shift+tab to cycle)
+                                            ✗ Auto-update failed · Run /doctor
+                                                              ● high · /effort
+     
+● Plan written. Here's the shape of it:
+
+  Direct answer to "do I have enough info": Yes — every integration seam is       verified in real code (dispatch point, the backend-agnostic agent_runs I'll
+  reuse, the token-mint refactor, pi's RPC/--tools/extension API). The only
+  thing reading can't settle is whether your local models drive pi's tool loop —
+  and per your "local is mandatory" call, that becomes Phase 0: a hard go/no-go
+  spike with a designed fallback (route weak models to Odysseus's native loop,
+  pi for strong ones).
+
+  Scoped to your three decisions — admin-only, memory-only, local-mandatory — so
+  it's much smaller than the full B′ vision:
+
+  - Phase 0: the spike. Build nothing else until a real local model proves it
+  can tool-call and survive compaction.
+  - Phase 1 (memory bridge): a new POST /api/codex/memory/search reusing
+  Odysseus's existing hybrid retrieval; an in-code mint_api_token helper; and
+  one TypeScript bridge extension that registers the local provider, a
+  manage_memory tool, and per-turn memory injection via before_agent_start.
+  - Phase 2 (RPC backend): src/pi_backend.py — an async generator spawning pi
+  --mode rpc (with --tools manage_memory excluding bash/read/write/edit),
+  translating pi events → Odysseus SSE; a "pi" branch at the chat_routes.py:494
+  dispatch handing it to agent_runs.start(). Stop/resume and the frontend need
+  zero changes.
+
+  Reuses agent_runs.py, platform_compat.py, the /api/codex/* memory endpoints,
+  and existing retrieval — building genuinely new code only where none exists.
+
+────────────────────────────────────────────────────────────────────────────────
+ Ready to code?
+
+ Here is Claude's plan:
+╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌
+ Implementation Plan — Gain #1: a long-horizon agent that knows you (pi inside
+ Odysseus)
+
+ Context
+
+ The report docs/odysseus-pi-integration-assessment.md identified Gain #1 as
+ the single most meaningful outcome of combining Odysseus and pi: a personal
+ agent that runs for many turns (pi's auto-compaction + session trees) and
+ carries durable knowledge of the user (Odysseus's memory). Neither tool
+ reaches this alone — Odysseus's native loop caps at 50 rounds with no
+ compaction (src/agent_tools.py:22); pi is amnesiac by design
+ (docs/what-is-pi.md:61-65).
+
+ This plan embeds pi as a new Odysseus session backend (mode="pi") driven over
+ JSONL-RPC, with a thin TypeScript "bridge" extension that (a) gives pi a
+ manage_memory tool backed by Odysseus's scoped API and (b) injects relevant
+ memories into pi's system prompt each turn. Per the user's decisions:
+ admin-only, memory read+write only, and local-model support is mandatory — so
+ the first phase is a hard go/no-go spike, because pi assumes provider-native
+ tool-calling while small local models may not deliver it reliably.
+
+ All seams below were verified first-hand in both repos.
+
+ ---
+ Phase 0 — GO/NO-GO spike: can local models drive pi's tool loop? (build
+ nothing else until this passes)
+
+ Why first: This is the one risk no code-reading can resolve. If small local
+ GGUFs can't reliably emit pi-native tool calls and stay coherent across a
+ compacted long session, Gain #1 cannot be delivered on local models as-is, and
+ we must adopt the fallback (below) before writing the integration.
+
+ Steps
+ 1. Install pi: npm i -g @earendil-works/pi-coding-agent (Node ≥ 22.19 —
+ packages/coding-agent/package.json:97), bin pi. Or build from the local tree
+ (npm install && npm run build in packages/coding-agent).
+ 2. Register the user's actual local model via ~/.pi/agent/models.json with
+ api: "openai-completions" pointing at the Cookbook/Ollama endpoint
+ (packages/coding-agent/docs/models.md:18-35).
+ 3. Capability test (pi's own tools): pi -p "read README.md and tell me its
+ first heading" and a write task. Observe whether the local model emits valid
+ tool calls at all.
+ 4. Long-horizon test (RPC): drive pi --mode rpc from the Python example
+ (packages/coding-agent/docs/rpc.md:1316-1350) through a 30+ turn task that
+ crosses the auto-compaction threshold; watch for derailment, malformed tool
+ calls, and post-compaction coherence.
+
+ Gate
+ - PASS (local model reliably tool-calls + survives compaction) → proceed to
+ Phase 1.
+ - FAIL → adopt the fallback: route weak local models to Odysseus's existing
+ native loop (src/agent_loop.py, built for them) and reserve pi for strong
+ models (large local or API), selected by model capability. Gain #1 then
+ applies where the model can sustain it, degrading gracefully. Re-scope Phase 1
+ around this routing before building.
+
+ ---
+ Phase 1 — Memory bridge (the "knows you" half)
+
+ 1a. New memory-search endpoint (reuse existing retrieval)
+
+ The current API only lists all memories (routes/codex_routes.py:267-272);
+ Odysseus's ranked hybrid retrieval (vector + keyword + recency) lives in
+ src/chat_processor.py:24-31 / src/memory_vector.py and is not exposed. Add:
+
+ - POST /api/codex/memory/search (scope memory:read) in routes/codex_routes.py,
+ body {query, k}, that calls the existing retrieval function (do not
+ reimplement ranking) and returns scored memories. Add/write already exist
+ (POST/DELETE /api/codex/memory, routes/codex_routes.py:274-354); no
+ memory-update endpoint exists, so updates are delete + re-add.
+
+ 1b. In-code token mint helper
+
+ Extract mint_api_token(owner, scopes, name) -> raw_token from the body of
+ create_token (routes/api_token_routes.py:123-140) so it can be called outside
+ a request. The route keeps calling it. Used to mint a per-session token scoped
+ to memory:read,memory:write when a pi session starts; store encrypted (reuse
+ EncryptedText, core/database.py:57-79) or in-memory keyed by session; revoke
+ on session end.
+
+ 1c. The bridge extension (integrations/pi/extension/odysseus-bridge.ts)
+
+ A single async extension (build to JS; pass via -e). It does three things:
+
+ - Registers the provider from env Odysseus injects (ODYSSEUS_MODEL_BASE_URL,
+ ODYSSEUS_MODEL_ID) via pi.registerProvider(..., { api: "openai-completions" })
+ — pattern: examples/extensions/custom-provider-anthropic/index.ts:568-604,
+ shape custom-provider.md:100-130. Avoids a global models.json.
+ - Registers manage_memory tool (pi.registerTool, async execute doing fetch →
+ /api/codex/memory* with Authorization: Bearer $ODYSSEUS_API_TOKEN) — actions
+ search (→ 1a) and add (→ existing POST). Template:
+ examples/extensions/dynamic-tools.ts:24-74.
+ - Injects memories each turn via pi.on("before_agent_start", ...) returning
+ {systemPrompt} — fetch relevant memories for event.prompt from
+ /api/codex/memory/search and prepend. Template:
+ examples/extensions/prompt-customizer.ts:86-96; result shape
+ src/core/extensions/types.ts:631-641.
+
+ ---
+ Phase 2 — The RPC backend and session wiring (the "runs long" half)
+
+ 2a. Python RPC backend (src/pi_backend.py, new)
+
+ An async generator (so agent_runs can drain it) that:
+ 1. Spawns pi with asyncio.create_subprocess_exec (NOT blocking Popen —
+ blocking readline in an async generator would stall the event loop). Pipes
+ stdin/stdout; apply detached_popen_kwargs() (core/platform_compat.py:46-61)
+ for clean process-group kill.
+   - Flags: --mode rpc --session-dir data/pi_sessions/<sid> --model <id>
+ --system-prompt "<assistant persona>" --tools manage_memory -e <bridge.js>
+ --no-skills. The --tools manage_memory allowlist excludes pi's built-in
+ bash/read/write/edit — verified to filter built-ins (src/core/sdk.ts:244-250,
+ agent-session.ts:2285). (Admin host tools can be added in a later phase.)
+   - Env: ODYSSEUS_URL, ODYSSEUS_API_TOKEN (minted in 1b),
+ ODYSSEUS_MODEL_BASE_URL, ODYSSEUS_MODEL_ID.
+ 2. Sends {"type":"prompt","message": <user msg>} (rpc.md:43-49).
+ 3. Reads pi's JSONL events and translates them to Odysseus SSE strings (data:
+ {json}\n\n), yielding each. Mapping (pi → Odysseus, event names from
+ rpc.md:741-985 and routes/chat_routes.py:691-1093):
+ | pi event                    | Odysseus SSE
+  |
+ |-----------------------------|-----------------------------------------------
+ --|
+ | message_update / text_delta | delta {text}
+  |
+ | tool_execution_start        | tool_start {tool_name, tool_input}
+  |
+ | tool_execution_end          | tool_output {tool_name, tool_output, success}
+  |
+ | usage / get_session_stats   | metrics {input_tokens, output_tokens}
+  |
+ | agent_end                   | persist messages + message_saved + data:
+ [DONE] |
+
+ 4. On cancel (GeneratorExit/aclose()): send {"type":"abort"}, then
+ kill_process_tree(pid) (core/platform_compat.py:101-130). This binds process
+ lifecycle to the run — no separate registry needed for v1.
+ 5. On agent_end: write user + assistant ChatMessage rows
+ (core/database.py:161-188) so the session list/history UI works; pi's
+ --session-dir JSONL remains the canonical transcript (mirror, don't mutate).
+
+ 2b. Dispatch wiring (routes/chat_routes.py)
+
+ At the mode branch (chat_routes.py:494-497), add a "pi" path: build the
+ pi_backend async generator, hand it to agent_runs.start(session, gen)
+ (src/agent_runs.py:141), and return
+ StreamingResponse(agent_runs.subscribe(session)). Stop/resume endpoints need
+ no change — they already operate on agent_runs (chat_routes.py stop/resume;
+ agent_runs.stop/subscribe).
+
+ 2c. Session creation (admin entry point)
+
+ Session.mode already supports new values (core/database.py:129). Add a minimal
+ admin-only way to create a mode="pi" session (a "New pi agent" action that
+ POSTs /api/session then sets mode). Frontend rendering needs no change — the
+ backend emits the same SSE event types the existing parser dispatches on
+ (static/js/chat.js).
+
+ ---
+ Reused (do not rebuild)
+
+ - src/agent_runs.py — detached run buffer/replay/stop; backend-agnostic, used
+ as-is.
+ - core/platform_compat.py — detached_popen_kwargs, kill_process_tree,
+ pid_alive.
+ - /api/codex/* memory add/delete + scope enforcement (_scope_owner,
+ routes/codex_routes.py:54-65).
+ - Existing hybrid memory retrieval (src/chat_processor.py,
+ src/memory_vector.py) — called by the new search endpoint.
+ - pi RPC mode, --tools/--system-prompt/-e (all verified against code).
+
+ Known v1 limitations (accepted)
+
+ - In-memory run state (no survival across Odysseus restart) — matches the
+ native loop today; pi's JSONL persists regardless.
+ - No memory update (delete + re-add).
+ - Memory-only surface; todos/calendar/email/documents deferred (each needs the
+ same bridge-tool + (for docs/email) new endpoints).
+ - Admin-only; multi-user (per-user scoped tokens, host-tool stripping) is a
+ later phase.
+
+ Verification
+
+ 1. Phase 0 gate — documented pass/fail on the user's real local model
+ (capability + long-horizon tests above). This decides the whole approach.
+ 2. Unit — feed canned pi JSONL event lines into pi_backend's translator;
+ assert exact Odysseus SSE output strings.
+ 3. Memory round-trip — in a pi session: "remember my dog is named Rex" →
+ assert a row appears via GET /api/codex/memory. Then a new pi session: "what's
+ my dog's name?" → assert the before_agent_start injection surfaces Rex in the
+ reply.
+ 4. Long-horizon — run a multi-step task past the compaction threshold; confirm
+ compaction_* events fire, the session stays coherent, and stop/resume (tab
+ close → reopen) replays correctly via agent_runs.subscribe.
+ 5. Lifecycle — confirm kill_process_tree reaps the pi process on stop and on
+ session delete (no orphans via pid_alive).
+╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌
+
+────────────────────────────────────────────────────────────────────────────────
+ Claude has written up a plan and is ready to execute. Would you like to
+ proceed?
+
+ > 1. Yes, and bypass permissions
+   2. Yes, manually approve edits
+   3. No, refine with Ultraplan on Claude Code on the web
+   4. Tell Claude what to change
+      shift+tab to approve with this feedback
+
+ ctrl-g to edit in Notepad  ·
+                           ~\.claude\plans\pleaes-come-up-with-cosmic-tome.md
+
+ pleaes come up with an implementation plan for Gain #1. do you have enough      info to implement #1
+
+● This is the right moment to be honest before planning: No — I don't yet have
+  enough to implement Gain #1 confidently. The assessment was grounded in docs;
+  an implementation plan needs to be grounded in the actual API surface and
+  integration points, plus two things the report explicitly left open
+  (small-model tool-calling, the detached learning loop). Let me close those
+  gaps by exploring the real code, then write a plan that's explicit about
+  what's verified vs. what needs a spike.
+
+  Launching three parallel Explore agents to ground the plan:
+
+● 3 background agents launched (↓ to manage)
+   ├ codex-api-explorer: Map Odysseus /api/codex bridge target
+   ├ session-stream-explorer: Map Odysseus session/stream/process internals        └ pi-reality-checker: Verify pi RPC client and extension reality
+
+● Three Explore agents are now grounding the plan against real code:
+
+  1. /api/codex/* bridge target — exact endpoints, scopes, and crucially whether  memory supports write (Gain #1 needs the agent to record what it learns about
+  you), plus how to mint a scoped token in-code.
+  2. Session / streaming / process internals — the SSE format and frontend
+  consumer (how invasive a new backend's stream is), the Session DB model, and
+  the reusable subprocess-lifecycle infra to spawn pi --mode rpc.
+  3. pi reality check — verifying the RPC client/extension API in actual code
+  (not just docs), confirming --tools truly excludes built-ins, and whether pi
+  is installable/runnable here.
+
+  While they run, my honest answer to "do you have enough info?" stands: not
+  yet, but I will once these land — with one risk that no amount of code-reading
+  can settle, only a runtime spike:
+
+  ★ Insight ─────────────────────────────────────
+  The decisive unknown for Gain #1 is whether your local models can actually
+  drive pi's native tool-calling loop. Odysseus's loop was built to tolerate
+  weak models (regex-parsed tool blocks + teacher escalation); pi assumes
+  provider-native function calls. If a 7B GGUF can't reliably emit clean tool
+  calls to pi, then Gain #1 — long-horizon agent that knows you — would only
+  work on API/large models, which dents the local-first premise. This is
+  empirical: it can't be read out of either repo, so the plan will front-load it
+  as a go/no-go spike before any bridge code.
+  ─────────────────────────────────────────────────
+
+  I'll write the plan to the plan file once all three reports are in, then
+  confirm remaining choices with you before finalizing.
+
+✻ -aMemory: read/add/delete all availables(routes/codex_routes.py:267-354) — no
+  update, but delete+re-add covers it. Sufficient for "the agent records what it
+※ learns about you."how to implement Gain #1, a long-horizon agent that knows
+  - Two real gaps that touch Gain #1's headline use case: document update isn't
+  exposed (only create/read/delete) — yet "maintain a running summary doc" was
+  the example task. And web_search/web_fetch aren't in /api/codex/*
+  (session-only). Both will be flagged in the plan with workarounds.
+● -gToken minting is REST-only via an admin sessionpleted · 5m 25s
+  (routes/api_token_routes.py:111-149) — there's no in-code mint helper, so the
+* planomustgaddressihowsaoper-session5scoped token8getsecreated and injected at
+  spawn.
+──────────────────────────────────────────────────────────────────── odysseus ──
+  Waiting on the session/streaming/lifecycle and pi-reality reports before
+  writing─the─plan.─────────────────────────────────────────────────────────────
+
+✻ Waiting for 1 background agent to finish
+
+● Agent "Verify pi RPC client and extension reality" completed · 5m 12s
+
+● Pi reality check confirms docs match code exactly — no surprises, which
+  de-risks the pi side substantially:
+                                                                                  - --tools/--no-tools genuinely filter built-ins at registration
+  (sdk.ts:244-250, agent-session.ts:2285) — the security gate is real, not        aspirational.
+  - pi.registerTool({...async execute...}) with HTTP calls — concrete template
+  at examples/extensions/dynamic-tools.ts:24-74.
+  - The memory-injection seam is confirmed: before_agent_start returns
+  {systemPrompt} to rewrite the prompt per turn
+  (examples/extensions/prompt-customizer.ts:86-96) — exactly how "inject what we  know about you" works.
+  - Install: npm @earendil-works/pi-coding-agent, Node ≥22.19, bin pi (from this
+  source tree needs npm run build first).
+
+  One report left — the Odysseus session/streaming/process-lifecycle internals
+  (the seam where a pi-backed session plugs into the existing UI). Once it lands
+  I'll write the plan.
+
+✻ Waiting for 1 background agent to finish
+
+※ recap: Goal: plan how to embed pi as Odysseus's long-horizon general agent
+  (Gain #1). Two of three code-exploration agents are done; waiting on the last   one mapping Odysseus's session/streaming/process internals, then I'll write
+  the implementation plan.
+
+● Agent "Map Odysseus session/stream/process internals" completed · 15m 13s
+
+● All three reports are in and consistent. Before writing the plan, let me
+  verify the three load-bearing seams with my own eyes (the dispatch point, the
+  detached-run API I'd reuse, and whether token-minting is callable in-code):
+
+  Read 1 file (ctrl+o to expand)
+
+● agent_runs is fully backend-agnostic — it drains any async generator of SSE
+  strings via start(session_id, agen) / subscribe / stop. My pi backend just
+  needs to be such a generator. Now the dispatch seam and the token mint:
+
+  Read 2 files (ctrl+o to expand)
+
+● Both seams confirmed exactly as reported:
+  - Dispatch (chat_routes.py:494-497): mode is decided here; a "pi" branch
+  builds the pi async-generator and hands it to agent_runs.start() instead of
+  the native loop — clean insertion.
+  - Token mint (api_token_routes.py:111-149): minting is ~15 lines
+  (_normalize_scopes → secrets.token_urlsafe → bcrypt → insert ApiToken);
+  extracting an in-code mint_api_token(owner, scopes, name) helper is a trivial
+  refactor.
+
+  My honest answer: yes — I now have enough to implement Gain #1. The
+  architecture is fully grounded; every seam is verified in real code. The one
+  thing no amount of reading can settle is whether your local models reliably
+  drive pi's native tool-calling — that's an empirical spike, not a planning
+  blocker.
+
+  Three decisions shape the plan's scope. Let me get your calls before
+  finalizing:
+────────────────────────────────────────────────────────────────────────────────Planning: C:\Users\simon\.claude\plans\pleaes-come-up-with-cosmic-tome.md
+────────────────────────────────────────────────────────────────────────────────←  [×] Scope  [×] Local models  [ ] v1 surface  √ Submit  →
+
+● User answered Claude's questions:
+  ⎿  · Who should the embedded pi agent serve in v1? → Admin-only (you) first
+     · Is reliable operation on small LOCAL models a hard requirement for v1? →      Local models are mandatory
+     · Which capabilities must the v1 agent be able to touch? (Memory is the
+     'knows you' core.) → Memory (read + write)
+
+● Decisions noted: admin-only v1, local models mandatory (so the spike is a true
+  go/no-go gate with a fallback designed in), memory read+write only as the v1
+  surface. That tightens the scope considerably. Writing the plan:
+
+● Updated plan
+  ⎿  /plan to preview
+
+● Plan written. Here's the shape of it:
+
+  Direct answer to "do I have enough info": Yes — every integration seam is
+  verified in real code (dispatch point, the backend-agnostic agent_runs I'll
+  reuse, the token-mint refactor, pi's RPC/--tools/extension API). The only
+  thing reading can't settle is whether your local models drive pi's tool loop —
+  and per your "local is mandatory" call, that becomes Phase 0: a hard go/no-go
+  spike with a designed fallback (route weak models to Odysseus's native loop,
+  pi for strong ones).
+
+  Scoped to your three decisions — admin-only, memory-only, local-mandatory — so
+  it's much smaller than the full B′ vision:
+
+  - Phase 0: the spike. Build nothing else until a real local model proves it
+  can tool-call and survive compaction.
+  - Phase 1 (memory bridge): a new POST /api/codex/memory/search reusing
+  Odysseus's existing hybrid retrieval; an in-code mint_api_token helper; and
+  one TypeScript bridge extension that registers the local provider, a
+  manage_memory tool, and per-turn memory injection via before_agent_start.
+  - Phase 2 (RPC backend): src/pi_backend.py — an async generator spawning pi
+  --mode rpc (with --tools manage_memory excluding bash/read/write/edit),
+  translating pi events → Odysseus SSE; a "pi" branch at the chat_routes.py:494
+  dispatch handing it to agent_runs.start(). Stop/resume and the frontend need
+  zero changes.
+
+  Reuses agent_runs.py, platform_compat.py, the /api/codex/* memory endpoints,
+  and existing retrieval — building genuinely new code only where none exists.
+
+────────────────────────────────────────────────────────────────────────────────
+ Ready to code?
+
+ Here is Claude's plan:
+╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌
+ Implementation Plan — Gain #1: a long-horizon agent that knows you (pi inside
+ Odysseus)
+
+ Context
+
+ The report docs/odysseus-pi-integration-assessment.md identified Gain #1 as
+ the single most meaningful outcome of combining Odysseus and pi: a personal
+ agent that runs for many turns (pi's auto-compaction + session trees) and
+ carries durable knowledge of the user (Odysseus's memory). Neither tool
+ reaches this alone — Odysseus's native loop caps at 50 rounds with no
+ compaction (src/agent_tools.py:22); pi is amnesiac by design
+ (docs/what-is-pi.md:61-65).
+
+ This plan embeds pi as a new Odysseus session backend (mode="pi") driven over
+ JSONL-RPC, with a thin TypeScript "bridge" extension that (a) gives pi a
+ manage_memory tool backed by Odysseus's scoped API and (b) injects relevant
+ memories into pi's system prompt each turn. Per the user's decisions:
+ admin-only, memory read+write only, and local-model support is mandatory — so
+ the first phase is a hard go/no-go spike, because pi assumes provider-native
+ tool-calling while small local models may not deliver it reliably.
+
+ All seams below were verified first-hand in both repos.
+
+ ---
+ Phase 0 — GO/NO-GO spike: can local models drive pi's tool loop? (build
+ nothing else until this passes)
+
+ Why first: This is the one risk no code-reading can resolve. If small local
+ GGUFs can't reliably emit pi-native tool calls and stay coherent across a
+ compacted long session, Gain #1 cannot be delivered on local models as-is, and
+ we must adopt the fallback (below) before writing the integration.
+
+ Steps
+ 1. Install pi: npm i -g @earendil-works/pi-coding-agent (Node ≥ 22.19 —
+ packages/coding-agent/package.json:97), bin pi. Or build from the local tree
+ (npm install && npm run build in packages/coding-agent).
+ 2. Register the user's actual local model via ~/.pi/agent/models.json with
+ api: "openai-completions" pointing at the Cookbook/Ollama endpoint
+ (packages/coding-agent/docs/models.md:18-35).
+ 3. Capability test (pi's own tools): pi -p "read README.md and tell me its
+ first heading" and a write task. Observe whether the local model emits valid
+ tool calls at all.
+ 4. Long-horizon test (RPC): drive pi --mode rpc from the Python example
+ (packages/coding-agent/docs/rpc.md:1316-1350) through a 30+ turn task that
+ crosses the auto-compaction threshold; watch for derailment, malformed tool
+ calls, and post-compaction coherence.
+
+ Gate
+ - PASS (local model reliably tool-calls + survives compaction) → proceed to
+ Phase 1.
+ - FAIL → adopt the fallback: route weak local models to Odysseus's existing
+ native loop (src/agent_loop.py, built for them) and reserve pi for strong
+ models (large local or API), selected by model capability. Gain #1 then
+ applies where the model can sustain it, degrading gracefully. Re-scope Phase 1
+ around this routing before building.
+
+ ---
+ Phase 1 — Memory bridge (the "knows you" half)
+
+ 1a. New memory-search endpoint (reuse existing retrieval)
+
+ The current API only lists all memories (routes/codex_routes.py:267-272);
+ Odysseus's ranked hybrid retrieval (vector + keyword + recency) lives in
+ src/chat_processor.py:24-31 / src/memory_vector.py and is not exposed. Add:
+
+ - POST /api/codex/memory/search (scope memory:read) in routes/codex_routes.py,
+ body {query, k}, that calls the existing retrieval function (do not
+ reimplement ranking) and returns scored memories. Add/write already exist
+ (POST/DELETE /api/codex/memory, routes/codex_routes.py:274-354); no
+ memory-update endpoint exists, so updates are delete + re-add.
+
+ 1b. In-code token mint helper
+
+ Extract mint_api_token(owner, scopes, name) -> raw_token from the body of
+ create_token (routes/api_token_routes.py:123-140) so it can be called outside
+ a request. The route keeps calling it. Used to mint a per-session token scoped
+ to memory:read,memory:write when a pi session starts; store encrypted (reuse
+ EncryptedText, core/database.py:57-79) or in-memory keyed by session; revoke
+ on session end.
+
+ 1c. The bridge extension (integrations/pi/extension/odysseus-bridge.ts)
+
+ A single async extension (build to JS; pass via -e). It does three things:
+
+ - Registers the provider from env Odysseus injects (ODYSSEUS_MODEL_BASE_URL,
+ ODYSSEUS_MODEL_ID) via pi.registerProvider(..., { api: "openai-completions" })
+ — pattern: examples/extensions/custom-provider-anthropic/index.ts:568-604,
+ shape custom-provider.md:100-130. Avoids a global models.json.
+ - Registers manage_memory tool (pi.registerTool, async execute doing fetch →
+ /api/codex/memory* with Authorization: Bearer $ODYSSEUS_API_TOKEN) — actions
+ search (→ 1a) and add (→ existing POST). Template:
+ examples/extensions/dynamic-tools.ts:24-74.
+ - Injects memories each turn via pi.on("before_agent_start", ...) returning
+ {systemPrompt} — fetch relevant memories for event.prompt from
+ /api/codex/memory/search and prepend. Template:
+ examples/extensions/prompt-customizer.ts:86-96; result shape
+ src/core/extensions/types.ts:631-641.
+
+ ---
+ Phase 2 — The RPC backend and session wiring (the "runs long" half)
+
+ 2a. Python RPC backend (src/pi_backend.py, new)
+
+ An async generator (so agent_runs can drain it) that:
+ 1. Spawns pi with asyncio.create_subprocess_exec (NOT blocking Popen —
+ blocking readline in an async generator would stall the event loop). Pipes
+ stdin/stdout; apply detached_popen_kwargs() (core/platform_compat.py:46-61)
+ for clean process-group kill.
+   - Flags: --mode rpc --session-dir data/pi_sessions/<sid> --model <id>
+ --system-prompt "<assistant persona>" --tools manage_memory -e <bridge.js>
+ --no-skills. The --tools manage_memory allowlist excludes pi's built-in
+ bash/read/write/edit — verified to filter built-ins (src/core/sdk.ts:244-250,
+ agent-session.ts:2285). (Admin host tools can be added in a later phase.)
+   - Env: ODYSSEUS_URL, ODYSSEUS_API_TOKEN (minted in 1b),
+ ODYSSEUS_MODEL_BASE_URL, ODYSSEUS_MODEL_ID.
+ 2. Sends {"type":"prompt","message": <user msg>} (rpc.md:43-49).
+ 3. Reads pi's JSONL events and translates them to Odysseus SSE strings (data:
+ {json}\n\n), yielding each. Mapping (pi → Odysseus, event names from
+ rpc.md:741-985 and routes/chat_routes.py:691-1093):
+ | pi event                    | Odysseus SSE
+  |
+ |-----------------------------|-----------------------------------------------
+ --|
+ | message_update / text_delta | delta {text}
+  |
+ | tool_execution_start        | tool_start {tool_name, tool_input}
+  |
+ | tool_execution_end          | tool_output {tool_name, tool_output, success}
+  |
+ | usage / get_session_stats   | metrics {input_tokens, output_tokens}
+  |
+ | agent_end                   | persist messages + message_saved + data:
+ [DONE] |
+
+ 4. On cancel (GeneratorExit/aclose()): send {"type":"abort"}, then
+ kill_process_tree(pid) (core/platform_compat.py:101-130). This binds process
+ lifecycle to the run — no separate registry needed for v1.
+ 5. On agent_end: write user + assistant ChatMessage rows
+ (core/database.py:161-188) so the session list/history UI works; pi's
+ --session-dir JSONL remains the canonical transcript (mirror, don't mutate).
+
+ 2b. Dispatch wiring (routes/chat_routes.py)
+
+ At the mode branch (chat_routes.py:494-497), add a "pi" path: build the
+ pi_backend async generator, hand it to agent_runs.start(session, gen)
+ (src/agent_runs.py:141), and return
+ StreamingResponse(agent_runs.subscribe(session)). Stop/resume endpoints need
+ no change — they already operate on agent_runs (chat_routes.py stop/resume;
+ agent_runs.stop/subscribe).
+
+ 2c. Session creation (admin entry point)
+
+ Session.mode already supports new values (core/database.py:129). Add a minimal
+ admin-only way to create a mode="pi" session (a "New pi agent" action that
+ POSTs /api/session then sets mode). Frontend rendering needs no change — the
+ backend emits the same SSE event types the existing parser dispatches on
+ (static/js/chat.js).
+
+ ---
+ Reused (do not rebuild)
+
+ - src/agent_runs.py — detached run buffer/replay/stop; backend-agnostic, used
+ as-is.
+ - core/platform_compat.py — detached_popen_kwargs, kill_process_tree,
+ pid_alive.
+ - /api/codex/* memory add/delete + scope enforcement (_scope_owner,
+ routes/codex_routes.py:54-65).
+ - Existing hybrid memory retrieval (src/chat_processor.py,
+ src/memory_vector.py) — called by the new search endpoint.
+ - pi RPC mode, --tools/--system-prompt/-e (all verified against code).
+
+ Known v1 limitations (accepted)
+
+ - In-memory run state (no survival across Odysseus restart) — matches the
+ native loop today; pi's JSONL persists regardless.
+ - No memory update (delete + re-add).
+ - Memory-only surface; todos/calendar/email/documents deferred (each needs the
+ same bridge-tool + (for docs/email) new endpoints).
+ - Admin-only; multi-user (per-user scoped tokens, host-tool stripping) is a
+ later phase.
+
+ Verification
+
+ 1. Phase 0 gate — documented pass/fail on the user's real local model
+ (capability + long-horizon tests above). This decides the whole approach.
+ 2. Unit — feed canned pi JSONL event lines into pi_backend's translator;
+ assert exact Odysseus SSE output strings.
+  can tool-call and survive compaction.
+  - Phase 1 (memory bridge): a new POST /api/codex/memory/search reusing
+  Odysseus's existing hybrid retrieval; an in-code mint_api_token helper; and
+  one TypeScript bridge extension that registers the local provider, a
+  manage_memory tool, and per-turn memory injection via before_agent_start.
+  - Phase 2 (RPC backend): src/pi_backend.py — an async generator spawning pi
+  --mode rpc (with --tools manage_memory excluding bash/read/write/edit),
+  translating pi events → Odysseus SSE; a "pi" branch at the chat_routes.py:494
+  dispatch handing it to agent_runs.start(). Stop/resume and the frontend need
+  zero changes.
+
+  Reuses agent_runs.py, platform_compat.py, the /api/codex/* memory endpoints,
+  and existing retrieval — building genuinely new code only where none exists.
+
+● User approved Claude's plan
+  ⎿  Plan saved to: ~\.claude\plans\pleaes-come-up-with-cosmic-tome.md · /plan
+     to edit
+     Implementation Plan — Gain #1: a long-horizon agent that knows you (pi
+     inside Odysseus)
+
+     Context
+
+     The report docs/odysseus-pi-integration-assessment.md identified Gain #1 as
+     the single most meaningful outcome of combining Odysseus and pi: a
+     personal agent that runs for many turns (pi's auto-compaction + session
+     trees) and carries durable knowledge of the user (Odysseus's memory).
+     Neither tool reaches this alone — Odysseus's native loop caps at 50 rounds
+     with no compaction (src/agent_tools.py:22); pi is amnesiac by design
+     (docs/what-is-pi.md:61-65).
+
+     This plan embeds pi as a new Odysseus session backend (mode="pi") driven
+     over JSONL-RPC, with a thin TypeScript "bridge" extension that (a) gives pi
+     a manage_memory tool backed by Odysseus's scoped API and (b) injects
+     relevant memories into pi's system prompt each turn. Per the user's
+     decisions: admin-only, memory read+write only, and local-model support is
+     mandatory — so the first phase is a hard go/no-go spike, because pi assumes
+     provider-native tool-calling while small local models may not deliver it
+     reliably.
+
+     All seams below were verified first-hand in both repos.
+
+     ---
+     Phase 0 — GO/NO-GO spike: can local models drive pi's tool loop? (build
+     nothing else until this passes)
+
+     Why first: This is the one risk no code-reading can resolve. If small local
+     GGUFs can't reliably emit pi-native tool calls and stay coherent across a
+     compacted long session, Gain #1 cannot be delivered on local models as-is,
+     and we must adopt the fallback (below) before writing the integration.
+
+     Steps
+     1. Install pi: npm i -g @earendil-works/pi-coding-agent (Node ≥ 22.19 —
+     packages/coding-agent/package.json:97), bin pi. Or build from the local
+     tree (npm install && npm run build in packages/coding-agent).
+     2. Register the user's actual local model via ~/.pi/agent/models.json with
+     api: "openai-completions" pointing at the Cookbook/Ollama endpoint
+     (packages/coding-agent/docs/models.md:18-35).
+     3. Capability test (pi's own tools): pi -p "read README.md and tell me its
+     first heading" and a write task. Observe whether the local model emits
+     valid tool calls at all.
+     4. Long-horizon test (RPC): drive pi --mode rpc from the Python example
+     (packages/coding-agent/docs/rpc.md:1316-1350) through a 30+ turn task that
+     crosses the auto-compaction threshold; watch for derailment, malformed tool
+     calls, and post-compaction coherence.
+
+     Gate
+     - PASS (local model reliably tool-calls + survives compaction) → proceed to
+     Phase 1.
+     - FAIL → adopt the fallback: route weak local models to Odysseus's existing
+     native loop (src/agent_loop.py, built for them) and reserve pi for strong
+     models (large local or API), selected by model capability. Gain #1 then
+     applies where the model can sustain it, degrading gracefully. Re-scope
+     Phase 1 around this routing before building.
+
+     ---
+     Phase 1 — Memory bridge (the "knows you" half)
+
+     1a. New memory-search endpoint (reuse existing retrieval)
+
+     The current API only lists all memories (routes/codex_routes.py:267-272);
+     Odysseus's ranked hybrid retrieval (vector + keyword + recency) lives in
+     src/chat_processor.py:24-31 / src/memory_vector.py and is not exposed. Add:
+
+     - POST /api/codex/memory/search (scope memory:read) in
+     routes/codex_routes.py, body {query, k}, that calls the existing retrieval
+     function (do not reimplement ranking) and returns scored memories.
+     Add/write already exist (POST/DELETE /api/codex/memory,
+     routes/codex_routes.py:274-354); no memory-update endpoint exists, so
+     updates are delete + re-add.
+
+     1b. In-code token mint helper
+
+     Extract mint_api_token(owner, scopes, name) -> raw_token from the body of
+     create_token (routes/api_token_routes.py:123-140) so it can be called
+     outside a request. The route keeps calling it. Used to mint a per-session
+     token scoped to memory:read,memory:write when a pi session starts; store
+     encrypted (reuse EncryptedText, core/database.py:57-79) or in-memory keyed
+     by session; revoke on session end.
+
+     1c. The bridge extension (integrations/pi/extension/odysseus-bridge.ts)
+
+     A single async extension (build to JS; pass via -e). It does three things:
+
+     - Registers the provider from env Odysseus injects
+     (ODYSSEUS_MODEL_BASE_URL, ODYSSEUS_MODEL_ID) via pi.registerProvider(..., {
+     api: "openai-completions" }) — pattern:
+     examples/extensions/custom-provider-anthropic/index.ts:568-604, shape
+     custom-provider.md:100-130. Avoids a global models.json.
+     - Registers manage_memory tool (pi.registerTool, async execute doing fetch
+     → /api/codex/memory* with Authorization: Bearer $ODYSSEUS_API_TOKEN) —
+     actions search (→ 1a) and add (→ existing POST). Template:
+     examples/extensions/dynamic-tools.ts:24-74.
+     - Injects memories each turn via pi.on("before_agent_start", ...) returning
+     {systemPrompt} — fetch relevant memories for event.prompt from
+     /api/codex/memory/search and prepend. Template:
+     examples/extensions/prompt-customizer.ts:86-96; result shape
+     src/core/extensions/types.ts:631-641.
+
+     ---
+     Phase 2 — The RPC backend and session wiring (the "runs long" half)
+
+     2a. Python RPC backend (src/pi_backend.py, new)
+
+     An async generator (so agent_runs can drain it) that:
+     1. Spawns pi with asyncio.create_subprocess_exec (NOT blocking Popen —
+     blocking readline in an async generator would stall the event loop). Pipes
+     stdin/stdout; apply detached_popen_kwargs() (core/platform_compat.py:46-61)
+     for clean process-group kill.
+       - Flags: --mode rpc --session-dir data/pi_sessions/<sid> --model <id>
+     --system-prompt "<assistant persona>" --tools manage_memory -e <bridge.js>
+     --no-skills. The --tools manage_memory allowlist excludes pi's built-in
+     bash/read/write/edit — verified to filter built-ins
+     (src/core/sdk.ts:244-250, agent-session.ts:2285). (Admin host tools can be
+     added in a later phase.)
+       - Env: ODYSSEUS_URL, ODYSSEUS_API_TOKEN (minted in 1b),
+     ODYSSEUS_MODEL_BASE_URL, ODYSSEUS_MODEL_ID.
+     2. Sends {"type":"prompt","message": <user msg>} (rpc.md:43-49).
+     3. Reads pi's JSONL events and translates them to Odysseus SSE strings
+     (data: {json}\n\n), yielding each. Mapping (pi → Odysseus, event names from
+     rpc.md:741-985 and routes/chat_routes.py:691-1093):
+     | pi event                    | Odysseus SSE
+         |
+     |-----------------------------|--------------------------------------------
+     -----|
+     | message_update / text_delta | delta {text}
+         |
+     | tool_execution_start        | tool_start {tool_name, tool_input}
+         |
+     | tool_execution_end          | tool_output {tool_name, tool_output,
+     success}   |
+     | usage / get_session_stats   | metrics {input_tokens, output_tokens}
+         |
+     | agent_end                   | persist messages + message_saved + data:
+     [DONE] |
+
+     4. On cancel (GeneratorExit/aclose()): send {"type":"abort"}, then
+     kill_process_tree(pid) (core/platform_compat.py:101-130). This binds
+     process lifecycle to the run — no separate registry needed for v1.
+     5. On agent_end: write user + assistant ChatMessage rows
+     (core/database.py:161-188) so the session list/history UI works; pi's
+     --session-dir JSONL remains the canonical transcript (mirror, don't
+     mutate).
+
+     2b. Dispatch wiring (routes/chat_routes.py)
+
+     At the mode branch (chat_routes.py:494-497), add a "pi" path: build the
+     pi_backend async generator, hand it to agent_runs.start(session, gen)
+     (src/agent_runs.py:141), and return
+     StreamingResponse(agent_runs.subscribe(session)). Stop/resume endpoints
+     need no change — they already operate on agent_runs (chat_routes.py
+     stop/resume; agent_runs.stop/subscribe).
+
+     2c. Session creation (admin entry point)
+
+     Session.mode already supports new values (core/database.py:129). Add a
+     minimal admin-only way to create a mode="pi" session (a "New pi agent"
+     action that POSTs /api/session then sets mode). Frontend rendering needs no
+     change — the backend emits the same SSE event types the existing parser
+     dispatches on (static/js/chat.js).
+
+     ---
+     Reused (do not rebuild)
+
+     - src/agent_runs.py — detached run buffer/replay/stop; backend-agnostic,
+     used as-is.
+     - core/platform_compat.py — detached_popen_kwargs, kill_process_tree,
+     pid_alive.
+     - /api/codex/* memory add/delete + scope enforcement (_scope_owner,
+     routes/codex_routes.py:54-65).
+     - Existing hybrid memory retrieval (src/chat_processor.py,
+     src/memory_vector.py) — called by the new search endpoint.
+     - pi RPC mode, --tools/--system-prompt/-e (all verified against code).
+
+     Known v1 limitations (accepted)
+
+     - In-memory run state (no survival across Odysseus restart) — matches the
+     native loop today; pi's JSONL persists regardless.
+     - No memory update (delete + re-add).
+     - Memory-only surface; todos/calendar/email/documents deferred (each needs
+     the same bridge-tool + (for docs/email) new endpoints).
+     - Admin-only; multi-user (per-user scoped tokens, host-tool stripping) is a
+
+     Session.mode already supports new values (core/database.py:129). Add a minimal admin-only way to create a mode="pi" session (a "New pi agent" action that POSTs /api/session then sets mode). Frontend
+     rendering needs no change — the backend emits the same SSE event types the existing parser dispatches on (static/js/chat.js).
+
+     ---
+     Reused (do not rebuild)
+
+     - src/agent_runs.py — detached run buffer/replay/stop; backend-agnostic, used as-is.
+     - core/platform_compat.py — detached_popen_kwargs, kill_process_tree, pid_alive.
+     - /api/codex/* memory add/delete + scope enforcement (_scope_owner, routes/codex_routes.py:54-65).
+     - Existing hybrid memory retrieval (src/chat_processor.py, src/memory_vector.py) — called by the new search endpoint.
+     - pi RPC mode, --tools/--system-prompt/-e (all verified against code).
+
+     Known v1 limitations (accepted)
+
+     - In-memory run state (no survival across Odysseus restart) — matches the native loop today; pi's JSONL persists regardless.
+     - No memory update (delete + re-add).
+     - Memory-only surface; todos/calendar/email/documents deferred (each needs the same bridge-tool + (for docs/email) new endpoints).
+     - Admin-only; multi-user (per-user scoped tokens, host-tool stripping) is a later phase.
+
+     Verification
+
+     1. Phase 0 gate — documented pass/fail on the user's real local model (capability + long-horizon tests above). This decides the whole approach.
+     2. Unit — feed canned pi JSONL event lines into pi_backend's translator; assert exact Odysseus SSE output strings.
+     3. Memory round-trip — in a pi session: "remember my dog is named Rex" → assert a row appears via GET /api/codex/memory. Then a new pi session: "what's my dog's name?" → assert the before_agent_start
+     injection surfaces Rex in the reply.
+     4. Long-horizon — run a multi-step task past the compaction threshold; confirm compaction_* events fire, the session stays coherent, and stop/resume (tab close → reopen) replays correctly via
+     agent_runs.subscribe.
+     5. Lifecycle — confirm kill_process_tree reaps the pi process on stop and on session delete (no orphans via pid_alive).
+
+● Plan approved. Phase 0 is an empirical spike — it needs Node ≥22.19, pi installed, and your local model serving on an OpenAI-compatible endpoint. Let me set up tracking and check the prerequisites before
+  doing anything that assumes they're present.
+
+● Bash(echo "--- node ---"; node --version 2>&1; echo "--- npm ---"; npm --version 2>&1; echo "--- pi (already installed?) ---"; pi --version 2>&1 || echo "pi not on P…)
+  ⎿  --- node ---
+     v22.22.0
+     --- npm ---
+     … +4 lines (ctrl+o to expand)
+
+● Node v22.22.0 (✓ ≥22.19), npm present, pi not yet installed. Let me set up task tracking and check whether a local model endpoint is actually serving — the spike is meaningless without one.
+
+● Bash(echo "--- Ollama (11434)? ---"; curl -s --max-time 3 http://localhost:11434/v1/models 2>&1 | head -c 600 || echo "no ollama"; echo; echo "--- Odysseus (7000)? -…)
+  ⎿  --- Ollama (11434)? ---
+
+     --- Odysseus (7000)? ---
+     … +13 lines (ctrl+o to expand)
+
+● Two findings:
+  - Node is fine (v22.22.0), pi not yet installed — I'll install it now (Phase 0 step 1, approved).
+  - No local model endpoint is serving (checked Ollama 11434, and ports 1234/8000/8080/5000 — all closed), and Odysseus isn't running. The Phase 0 spike is a hard gate and it's empirical — it can't run without
+  your real local model serving on an OpenAI-compatible endpoint. Odysseus itself doesn't need to be up for the spike (it tests pi↔model directly), but the model does.
+
+  Installing pi while I get the model situation from you:
+
+● Bash(npm i -g @earendil-works/pi-coding-agent 2>&1 | tail -20; echo "--- verify ---"; pi --version 2>&1 || echo "still not on PATH")
+  ⎿  npm WARN deprecated node-domexception@1.0.0: Use your platform's native DOMException instead
+
+     added 129 packages in 10s
+     … +5 lines (ctrl+o to expand)
+  ⎿  (timeout 5m)
+
+● pi 0.78.1 installed ✓. Now the one real blocker for the Phase 0 gate: a serving local model. This is your call — the spike must test the model you actually intend the agent to run on.
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── [ ] Local model
+
+How do you want to provide the local model for the Phase 0 spike? (Nothing is currently serving on any common port.)
+
+> 1. I'll start Ollama
+     You start Ollama (e.g. `ollama serve` + `ollama pull <model>`) and tell me the model name. I'll point pi at http://localhost:11434/v1. Easiest on Windows.
+  2. Start Odysseus + use Cookbook
+     Bring up Odysseus and serve a model via its Cookbook (vLLM/llama.cpp), then I point pi at that endpoint. Closest to the real deployment but heavier to set up.
+  3. Point me at an endpoint
+     You already have (or will start) an OpenAI-compatible server somewhere — give me the base URL, model id, and any API key, and I'll run the spike against it.
+  4. Defer the spike
+     Hold Phase 0 for now. I can't honestly proceed to build Phase 1/2 first (you made local support mandatory and the gate decides the architecture), but I can prepare the spike scripts so it's one command
+     when you're ready.
+  5. Type something.
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  6. Chat about this
+
+Enter to select · ↑/↓ to navigate · Esc to cancel
+
+  3 tasks (0 done, 3 open)
+  □ Phase 0: GO/NO-GO spike — local model drives pi tool loop
+  □ Phase 1: Memory bridge (search endpoint + token mint + bridge extension)
+  □ Phase 2: RPC backend + session wiring
+

@@ -1,0 +1,464 @@
+simon@Simon_laptop MINGW64 ~/Downloads/collections/odysseus_collection/odysseus-dev
+$ ollama
+>>> hi
+Thinking...
+Thinking Process:
+
+1.  **Analyze the input:** The input is "hi". It is a simple, friendly greeting.2.  **Determine the appropriate response:** The goal is to maintain a friendly, conversational tone and acknowledge the greeting.
+3.  **Identify standard responses:**
+    *   "Hi" / "Hello" (Mirroring the greeting)
+    *   "Hello! How can I help you?" (Acknowledging and offering assistance)
+    *   "Hi there! What's up?" (More casual, engaging)
+4.  **Select the best response:** A combination of acknowledgment and offering assistance is generally the most helpful and professional approach for an AI chatbot.
+
+*Self-Correction/Refinement:* Just "Hello" is okay, but adding an engaging follow-up question makes the interaction better.
+
+5.  **Final Output Generation:** (Friendly greeting + invitation to chat).
+...done thinking.
+
+Hi! How can I help you today? 😊
+
+>>> /exit
+Ollama 0.24.0
+
+▸ Chat with a model (gemma4:e4b)
+    Start an interactive chat with a model
+
+  Launch Claude Code
+    Anthropic's coding tool with subagents
+
+  Launch Codex App
+    An AI agent you can delegate real work to, by OpenAI
+
+  Launch Hermes Agent
+    Self-improving AI agent built by Nous Research
+
+  Launch OpenClaw (install)
+    Personal AI with 100+ skills
+
+  More...
+    Show additional integrations
+
+
+↑/↓ navigate • enter launch • → configure • esc quit
+
+
+/exit
+
+
+back to CC
+
+ [ ] Local model
+
+How do you want to provide the local model for the Phase 0 spike? (Nothing is
+currently serving on any common port.)
+
+> 1. I'll start Ollama
+     You start Ollama (e.g. `ollama serve` + `ollama pull <model>`) and tell me
+     the model name. I'll point pi at http://localhost:11434/v1. Easiest on
+     Windows.
+  2. Start Odysseus + use Cookbook
+     Bring up Odysseus and serve a model via its Cookbook (vLLM/llama.cpp), then
+     I point pi at that endpoint. Closest to the real deployment but heavier to
+     set up.
+  3. Point me at an endpoint
+     You already have (or will start) an OpenAI-compatible server somewhere —
+     give me the base URL, model id, and any API key, and I'll run the spike
+     against it.
+  4. Defer the spike
+     Hold Phase 0 for now. I can't honestly proceed to build Phase 1/2 first
+     (you made local support mandatory and the gate decides the architecture),
+     but I can prepare the spike scripts so it's one command when you're ready.
+> 5. you can start ollama for me
+────────────────────────────────────────────────────────────────────────────────
+  6. Chat about this
+
+Enter to select · ↑/↓ to navigate · ctrl+g to edit in Notepad · Esc to cancel
+
+  3 tasks (0 done, 3 open)
+  □ Phase 0: GO/NO-GO spike — local model drives pi tool loop
+  □ Phase 1: Memory bridge (search endpoint + token mint + bridge ex…
+  □ Phase 2: RPC backend + session wiring
+
+────────────────────────────────────────────────────────────────────────────────
+ [ ] Local model
+
+How do you want to provide the local model for the Phase 0 spike? (Nothing is
+currently serving on any common port.)
+
+> 1. I'll start Ollama
+     You start Ollama (e.g. `ollama serve` + `ollama pull <model>`) and tell me
+     the model name. I'll point pi at http://localhost:11434/v1. Easiest on
+● Bash(npm i -g @earendil-works/pi-coding-agent 2>&1 | tail -20; echo "---
+
+● pi 0.78.1 installed ✓. Now the one real blocker for the Phase 0 gate: a
+  serving local model. This is your call — the spike must test the model you
+  actually intend the agent to run on.
+
+● User answered Claude's questions:
+  ⎿  · How do you want to provide the local model for the Phase 0 spike?
+     (Nothing is currently serving on any common port.) → you can start ollama
+     for me
+
+● On it. Let me check if Ollama is installed and what models you already have
+  (to avoid a huge download):
+
+● Bash(echo "--- ollama on PATH? ---"; ollama --version 2>&1 || echo "ollama NOT      installed"; echo "--- existing models ---"; ollama list 2>&1 | head -20
+      || echo "(cann…)
+  ⎿  Running in the background (↓ to manage)
+
+● Bash(sleep 3; cat "C:\Users\simon\AppData\Local\Temp\claude\C--Users-simon-Dow      nloads-collections-odysseus-collection-odysseus-dev\866bc2eb-cf29-4d54-b22
+      9-593cd3ae04d…)
+  ⎿  --- ollama on PATH? ---
+     Warning: could not connect to a running Ollama instance
+     Warning: client version is 0.24.0
+     --- existing models ---
+
+● Ollama is installed (v0.24.0) but the server isn't running and no models are
+  listed. Let me start the server, then check for models:
+
+● Bash(ollama serve)
+  ⎿  Running in the background (↓ to manage)
+
+● Bash(sleep 4; echo "--- server up? ---"; curl -s --max-time 4
+      http://localhost:11434/api/version 2>&1; echo; echo "--- models ---";
+      ollama list 2>&1)
+  ⎿  --- server up? ---
+     {
+       "version": "0.24.0"
+     … +4 lines (ctrl+o to expand)
+
+● Ollama is up with one model: gemma4:e4b (9.6 GB). That's what we'll test.
+  First a quick liveness + raw tool-calling check via the OpenAI-compatible
+  endpoint (this diagnoses the crux directly — does the model emit tool calls at  all?):
+     content: ''
+  ⎿  (timeout 2m)
+
+● Empty content — need to see the full response shape (could be a thinking
+  model, or tokens consumed elsewhere):
+
+● Bash(echo "=== raw response ==="; curl -s --max-time 90
+      http://localhost:11434/v1/chat/completions -H "Content-Type:
+      application/json" -d '{"model":"gemma4:e4b","mes…)
+  ⎿  === raw response ===
+     {
+         "id": "chatcmpl-332",
+     … +20 lines (ctrl+o to expand)
+  ⎿  (timeout 2m)
+
+● Model works (cold-start ate the first response). Now the decisive check — does  gemma4:e4b emit native tool calls when given an OpenAI tools array?           
+● Bash(echo "=== tool-calling test (raw OpenAI tools API) ==="; curl -s
+      --max-time 120 http://localhost:11434/v1/chat/completions -H
+      "Content-Type: application/json" -…)
+  ⎿  === tool-calling test (raw OpenAI tools API) ===
+     {
+         "id": "chatcmpl-777",
+     … +32 lines (ctrl+o to expand)
+  ⎿  (timeout 2m 10s)
+
+● gemma4:e4b emits valid native tool calls — finish_reason: "tool_calls",
+  correct function name, well-formed arguments {"city":"Paris"}, and it even      reasons first. That's the single most important signal for Phase 0. Now the
+  real test: the full pi loop (pi's own system prompt + tool schemas + parsing),  not just raw Ollama. Setting up pi's models.json:
+
+● Bash(mkdir -p "C:/Users/simon/.pi/agent" && echo "dir ready"; ls -la
+      "C:/Users/simon/.pi/agent" 2>&1)
+  ⎿  dir ready
+     total 4
+     drwxr-xr-x 1 simon 197609 0 Feb  1 18:19 .
+     … +2 lines (ctrl+o to expand)
+
+● Write(~\.pi\agent\models.json)
+  ⎿  Wrote 24 lines to ..\..\..\..\.pi\agent\models.json
+       1 {
+       2   "providers": {
+       3     "ollama": {
+       4       "baseUrl": "http://localhost:11434/v1",
+       5       "api": "openai-completions",
+       6       "apiKey": "ollama",
+       7       "compat": {
+       8         "supportsDeveloperRole": false,
+       9         "supportsReasoningEffort": false
+      10       },
+     … +15 lines (ctrl+o to expand)
+
+● pi config written (small 8192 context — actually convenient, it'll force
+  compaction sooner for the long-horizon test). Let me confirm pi sees the
+  model, then run the capability test with a real built-in tool in a scratch
+  workspace:
+
+● Bash(echo "=== pi sees the model? ==="; pi --list-models 2>&1 | grep -i -E
+      "ollama|gemma" | head; echo; echo "=== set up scratch workspace ==="; rm
+      -rf /tmp/pi-spike…)
+  ⎿  === pi sees the model? ===
+     ollama    gemma4:e4b             8.2K     2.0K     yes       no
+     … +6 lines (ctrl+o to expand)
+
+  — can pi actually drive gemma4:e4b through a real tool call (read) and use      the result?
+
+● Bash(cd /tmp/pi-spike && echo "=== pi capability test: read tool ===" &&
+      timeout 180 pi -p "Read the file NOTES.md and tell me the secret launch
+      code. Use the read t…)
+  ⎿  === pi capability test: read tool ===
+     Cannot continue from message role: assistant
+     === exit: 0 ===
+  ⎿  (timeout 3m 20s)
+
+● pi threw Cannot continue from message role: assistant — exactly the kind of
+  friction the spike exists to surface. Let me isolate whether it's
+  tool-specific or general, and get the raw event stream:
+
+● Bash(cd /tmp/pi-spike
+      echo "=== A. Plain generation, NO tools ==="…)
+  ⎿  === A. Plain generation, NO tools ===
+     Hello.
+     === exit: 0 ===
+     … +426 lines (ctrl+o to expand)
+  ⎿  (timeout 5m 20s)
+
+● Big signal in B: the model's thinking shows it successfully called read, got
+  the file contents, and saw ZEBRA-7. The tool loop works in JSON mode. Let me    see how B ended — did it deliver the final answer or choke?
+
+● Bash(f="C:\Users\simon\.claude\projects\C--Users-simon-Downloads-collections-o      dysseus-collection-odysseus-dev\866bc2eb-cf29-4d54-b229-593cd3ae04d0\tool-
+      results\bucfu…)
+  ⎿  Error: Exit code 1
+     === tool_execution events (did read fire?) ===
+
+     === final text answer (text_delta) ===
+     Traceback (most recent call last):
+       File "<string>", line 6, in <module>
+         for m in re.finditer(r'"type":"text_delta","contentIndex":\d+,"delta":(     "(?:[^"\]|\.)*")',txt):
+                  ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^     ^^^^^^^^^^^^^^^^^^^^^^
+       File "C:\Users\simon\AppData\Local\Programs\Python\Python313\Lib\re\__ini
+     t__.py", line 285, in finditer
+         return _compile(pattern, flags).finditer(string)
+
+     … +30 lines (ctrl+o to expand)
+
+● Shell mangled my regex escapes. Let me use a clean script file:
+
+● Write(C:\tmp\analyze_pi.py)
+  ⎿  Wrote 43 lines to ..\..\..\..\..\..\tmp\analyze_pi.py
+       2 import json, sys
+       3 path = r"C:\Users\simon\.claude\projects\C--Users-simon-Download
+         s-collections-odysseus-collection-odysseus-dev\866bc2eb-cf29-4d5
+         4-b229-593cd3ae04d0\tool-results\bucfummsi.txt"
+       4 text = open(path, encoding="utf-8", errors="replace").read()
+       6 # Section B starts after the marker
+       7 marker = "Tool task via JSON mode"
+       8 b = text[text.find(marker):] if marker in text else text
+       9
+      10 text_chunks = []
+     … +35 lines (ctrl+o to expand)
+  ⎿  Found 1 new diagnostic issue in 1 file (ctrl+o to expand)
+
+● Bash(python C:\tmp\analyze_pi.py)
+  ⎿  Error: Exit code 2
+     C:\Users\simon\AppData\Local\Programs\Python\Python313\python.exe: can't
+     open file 'C:\\Users\\simon\\Downloads\\collections\\odysseus_collection\\o     dysseus-dev\\tmpanalyze_pi.py': [Errno 2] No such file or directory
+
+● Backslash-escaping again — need to quote the Windows path:
+
+● Bash(python "C:/tmp/analyze_pi.py")
+  ⎿  EVENT TYPE COUNTS:
+       agent_end: 1
+       compaction_end: 1
+     … +12 lines (ctrl+o to expand)
+
+● Rich signal here. Decoding it:
+
+  - JSON mode succeeded end-to-end: agent_end present, correct final answer "The  secret launch code found in NOTES.md is ZEBRA-7" — the model genuinely read
+  the file (it can't know ZEBRA-7 otherwise).
+  - But two red flags: (1) -p mode hard-failed with Cannot continue from message       2
+         lling loopher gemma4:e4b reliably completes a multi-step tool-ca
+       4 through pi's RPC interface (the real integration path for Phase
+         2).
+       6 import json, subprocess, threading, time, sys, os
+       7
+       9 os.makedirs(WORKSPACE, exist_ok=True)
+      10 with open(os.path.join(WORKSPACE, "NOTES.md"), "w", encoding="ut
+         f-8") as f:
+     … +85 lines (ctrl+o to expand)
+  ⎿  Found 5 new diagnostic issues in 1 file (ctrl+o to expand)
+
+● Pyright nits are harmless for a spike (Optional stdin/stdout). Running the
+  real RPC path:
+
+● Bash(python "C:/tmp/rpc_spike.py" 2>&1 | tail -30)
+  ⎿  === RPC SPIKE RESULT ===
+     completed (agent_end): True
+     event type counts: {'response': 1, 'agent_start': 1, 'turn_start': 2,
+     … +9 lines (ctrl+o to expand)
+  ⎿  (timeout 3m 20s)
+
+● The RPC path — the actual Phase 2 integration path — works perfectly:
+  - agent_end: True, clean completion
+  - tool_execution_start/end: 1 each → read fired exactly once
+  - Correct multi-step loop (2 turns: call tool → answer with result)
+  - Right answer (ZEBRA-7), zero stderr errors
+
+  So the Cannot continue from message role: assistant failure was specific to -p  print mode, not RPC — our path handles the reasoning-model + tool-call
+  sequence correctly. That's the decisive de-risking.
+
+  One more gate criterion: long-horizon coherence across compaction (a
+  compaction_start already fired even on this tiny task due to the tight 8192
+  window — good, it means I can test compaction quickly). Writing a multi-turn
+  harness:
+
+● Write(C:\tmp\rpc_longhorizon.py)
+  ⎿  Wrote 111 lines to ..\..\..\..\..\..\tmp\rpc_longhorizon.py
+         ith recall +ong-horizon spike: many turns crossing compaction, w
+       2 repeated tool use, to gauge whether gemma4:e4b stays coherent an
+         d keeps
+       3 tool-calling reliably over a long pi RPC session.
+       4 """
+       6 from collections import Countering, os
+       7
+       8 WS = r"C:\tmp\pi-spike-long"
+       9 os.makedirs(WS, exist_ok=True)
+      10 # a few files the agent will read across turns
+     … +117 lines (ctrl+o to expand)
+  ⎿  Found 5 new diagnostic issues in 1 file (ctrl+o to expand)
+
+● Bash(python "C:/tmp/rpc_longhorizon.py" 2>&1 | tail -45)
+  ⎿  Running in the background (↓ to manage)
+  ⎿  (timeout 10m)
+
+● The long-horizon spike (11 turns through local inference, crossing compaction)  is running in the background — it'll take a few minutes. So far the gate is
+  looking like a GO:
+
+  ┌────────────────────────┬────────────────────────────────────────────────┐
+  │         Check          │                     Result                     │     ├────────────────────────┼────────────────────────────────────────────────┤
+  │ Model emits native     │ ✓ (raw + via pi)                               │
+  │ tool calls             │                                                │
+  ├────────────────────────┼────────────────────────────────────────────────┤
+  │ RPC tool loop (our     │ ✓ clean: read fired, correct multi-step        │
+  │ actual path)           │ answer, no errors                              │
+  ├────────────────────────┼────────────────────────────────────────────────┤
+  │ Compaction triggers &  │ ✓ (fired even on the small task, completed     │
+  │ recovers               │ fine)                                          │
+  ├────────────────────────┼────────────────────────────────────────────────┤
+  │ -p print mode          │ ✗ Cannot continue from message role: assistant │
+  │                        │  — but that's not a path we use                │
+  ├────────────────────────┼────────────────────────────────────────────────┤
+  │ Long-horizon coherence │ ⏳ running now                                 │
+  │  + recall              │                                                │
+  └────────────────────────┴────────────────────────────────────────────────┘
+
+  I'll report the scorecard when the multi-turn run finishes, then make the
+  formal GO/NO-GO call.
+  formal GO/NO-GO call.
+
+✻ Sautéed for 6h 34m 8s · 3 shells still running
+
+● Background command "Run long-horizon multi-turn spike" completed (exit code 0)
+
+  Read 1 file (ctrl+o to expand)
+
+● The long-horizon results are in, and they're strong:
+
+  Scorecard (11 turns, tiny 8192 context forcing stress):
+  - 10/11 turns completed; the one miss (turn 7) returned empty text but the
+  same fact was recalled correctly on turns 8 & 11
+  - 8 compactions fired — and recall survived every one: dog=Rex ✓, number=42 ✓,
+  city=Lisbon ✓
+  - All 5 tool reads fired, correct keywords (GIRAFFE/HARBOR/VELVET)
+  - Final summary perfectly coherent, blending personal facts + tool-derived
+  data
+
+  That the model stayed coherent and recalled early facts across 8 compaction
+  cycles is the single most important Gain #1 signal — it's exactly the
+  long-horizon behavior the whole integration depends on. Let me record the
+  decision durably and update tracking:
+
+  Read 1 file (ctrl+o to expand)
+
+● Update(docs\odysseus-pi-integration-assessment.md)
+  ⎿  Added 4 lines, removed 2 lines
+       1  # Odysseus × pi — Integration Assessment
+       2
+       3 -**Date:** 2026-06-07
+       4 -**Status:** Exploration only — no implementation. Every claim b
+         -elow is grounded in a file in one of the two local repos; unres
+         -olved issues are marked **⚠ UNRESOLVED** or **⚠ FRICTION**.                  3 +**Date:** 2026-06-07 (Phase 0 spike executed 2026-06-08)
+       4 +**Status:** Exploration + Phase 0 spike done. Implementation of
+         + Gain #1 planned and gated. Every claim below is grounded in a
+         +file in one of the two local repos; unresolved issues are marke
+         +d **⚠ UNRESOLVED** or **⚠ FRICTION**.
+       5
+       6 +> **Phase 0 GO/NO-GO spike result — 2026-06-08: ✅ GO.** The on
+         +e risk no code-reading could settle (can a small local model dr
+         +ive pi's native tool-calling loop?) was tested empirically agai
+         +nst the user's local model `gemma4:e4b` served by Ollama, throu
+         +gh pi's actual RPC path. Results: native tool calls emitted cor
+         +rectly; RPC multi-step tool loop completed cleanly (`tool_execu
+         +tion_start/end`, correct answer, no errors); an 11-turn long-ho
+         +rizon run completed 10/11 turns and **preserved early-establish
+         +ed personal facts (Rex / 42 / Lisbon) across 8 compaction cycle
+         +s** while all 5 tool reads fired correctly. Caveats: (1) pi's `
+         +-p` **print** mode hard-fails on this reasoning model with `Can
+         +not continue from message role: assistant` — irrelevant, since
+         +the integration uses **RPC** mode, which works; (2) the spike u
+         +sed an artificially small 8192 context window that forced exces
+         +sive compaction — production `models.json` must set the model's
+         + real context window; (3) ~1 in 11 turns returned empty text un
+         +der that stress — the Phase 2 backend should treat an empty `ag
+         +ent_end` gracefully (retry/surface). Net: Gain #1 is viable on
+         +local models; proceed to Phase 1.
+       7 +
+       8  **Repos examined:**
+       9  - **Odysseus** — `C:\Users\simon\Downloads\collections\odysseus
+          _collection\odysseus-dev` ([github.com/pewdiepie-archdaemon/ody
+          sseus](https://github.com/pewdiepie-archdaemon/odysseus)). Pyth
+          on 3.11+ / FastAPI self-hosted AI workspace: chat, native agent
+          , Cookbook model serving, deep research, memory/skills, email/c
+          alendar/notes (`README.md:11-25`).
+      10  - **pi** — `C:\Users\simon\Downloads\collections\pi_collection\
+          pi_architecture_hugginface\pi-main` (npm `@earendil-works/pi-co
+          ding-agent`, MIT, © 2025 Mario Zechner — `LICENSE:1-3`). TypeSc
+          ript monorepo: minimal terminal coding agent with a unified LLM
+           API (~30 providers), agent loop, coding harness, TUI (`docs/wh
+          at-is-pi.md:11-44`).
+
+● Phase 0 GO, recorded in the assessment doc. Now Phase 1 (memory bridge).
+  Before editing the real Odysseus source, let me check version-control state
+  and read the exact files I'll modify (the subagents gave line numbers, but I
+  must read before editing):
+
+● Bash(cd
+      "C:/Users/simon/Downloads/collections/odysseus_collection/odysseus-dev" &&
+      echo "=== git? ===" && (git rev-parse --is-inside-work-tree 2>&1 || echo
+      "NOT a gi…)
+  ⎿  === git? ===
+     fatal: not a git repository (or any of the parent directories): .git
+     NOT a git repo
+     … +2 lines (ctrl+o to expand)
+
+● Important safety flag before I touch the source: the Odysseus tree is not a
+  git repository. Every edit I make in Phase 1/2 would be unversioned — no clean
+  undo if something needs reverting. That's a lot of multi-file change (a new     Python module, a new endpoint, a token refactor, dispatch wiring, a TS
+  extension) to make with no safety net.                                        ──────────────────────────────────────────────────────────────────────────────── [ ] Safety net
+
+The Odysseus source isn't under version control. How should I proceed before
+making the Phase 1/2 edits?
+
+> 1. git init first (recommended)
+     I run `git init` and make an initial commit of the current tree, so all my      changes are reviewable as a diff and fully revertable. ~10 seconds, no
+     downside.
+  2. Proceed without git
+     Edit the live source directly with no version control. Faster to start but
+     no clean rollback; you'd rely on manual backups.
+  3. Work in a separate copy
+     Copy the repo to a sibling dir and build there, leaving your working tree
+     untouched until you're happy. Safest for your running install, but diverges
+     from the live tree.
+  4. Type something.
+────────────────────────────────────────────────────────────────────────────────
+  5. Chat about this
+
+Enter to select · ↑/↓ to navigate · Esc to cancel
+
+  3 tasks (1 done, 1 in progress, 1 open)
+  √ Phase 0: GO/NO-GO spike — local model drives pi tool loop
+  ■ Phase 1: Memory bridge (search endpoint + token mint + bridge ex…
+  □ Phase 2: RPC backend + session wiring
+

@@ -1,0 +1,1324 @@
+dev
+$ claude-yolo --chrome --name odysseus
+╭─── Claude Code v2.1.168 ─────────────────────────────────────────────────────╮
+╭─── Claude Code v2.1.168 ─────────────────────────────────────────────────────╮
+│                                                    │ Tips for getting        │
+│                 Welcome back Simon!                │ started                 │
+│                                                    │ Run /init to create a … │
+│                       ▐▛███▜▌                      │ ─────────────────────── │
+│                      ▝▜█████▛▘                     │ What's new              │
+│                        ▘▘ ▝▝                       │ Bug fixes and reliabil… │
+│   Opus 4.8 (1M context) with hi… · Claude Max ·    │ Bug fixes and reliabil… │
+│   az9713@yahoo.com's Organization                  │ Added `fallbackModel` … │
+│ ~\Downloads\collections\odysseus_collection\odyss… │ /release-notes for more │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+ ‼ 3 setup issues: MCP · /doctor
+
+> read .ignore/cc2_odysseus.txt for context
+
+  Read 1 file (ctrl+o to expand)
+
+● PowerShell(Get-ChildItem | Select-Object -First 40 Name)
+  ⎿  Name
+     ----
+     .claude
+     … +39 lines (ctrl+o to expand)
+
+● Context absorbed. Here's what that transcript tells me:
+
+  Previous session summary (odysseus_test)
+
+  1. Odysseus was successfully installed at ~/Downloads/odysseus_test/odysseus —
+  venv (Python 3.13.5), deps installed, SQLite DB + .env created, admin account
+  (admin / a generated password verified against the bcrypt hash), server
+  confirmed live on http://localhost:7000.
+  2. Notable quirk found: setup.py gates printing the generated admin password
+  on an isatty() check, so it vanished in a background process — worked around
+  via ODYSSEUS_ADMIN_USER/ODYSSEUS_ADMIN_PASSWORD env vars.
+  3. The session then died with a persistent API error (unexpected tool_use_id
+  in advisor_tool_result blocks) after a /branch — a harness/serialization bug,
+  not anything you did. Every retry hit the same corrupted message history,
+  which is why /clear + this new session.
+  4. The unfinished task (asked 3× but never executed):
+
+  ▎ Read the pi-agent docs in C:\Users\simon\Downloads\collections\pi_collection
+  ▎ \pi_architecture_hugginface\pi-main\{*.md,docs\*.md} and explore whether
+  ▎ Odysseus and pi could combine into one productive AI-agent suite — analysis
+  ▎ only, no implementation, grounded in both repos' actual docs/code with
+  ▎ links, unresolvable issues documented and marked.
+
+  5. The user also asked to save context for future sessions — which never
+  happened due to the error. This file (cc2_odysseus.txt) is effectively that
+  saved context.
+
+  Where we are now
+
+  We're in odysseus_collection\odysseus-dev — a full Odysseus source tree (the
+  repo itself: app.py, core/, routes/, services/, mcp_servers/, docs/, etc.),
+  not the test install. So I can ground the Odysseus side of the analysis
+  directly in this codebase.
+
+  ★ Insight ─────────────────────────────────────
+  That API error was a message-history corruption: an advisor (server-side tool)
+  result block lost its paired server_tool_use block, and since the API
+  validates the entire conversation on every request, the session became
+  permanently unsendable — no prompt could fix it. Branching/resuming
+  mid-advisor-call is the likely trigger.
+  ─────────────────────────────────────────────────
+
+  Shall I proceed with the pending task — reading the pi-agent docs at
+  pi_collection\pi_architecture_hugginface\pi-main and producing the grounded
+  Odysseus × pi integration analysis (no implementation)? Or did you have
+  something else in mind for this session?
+
+✻ Baked for 38s
+
+> yes read the pi docs and assess integration potential
+
+  Searched for 3 patterns, read 2 files (ctrl+o to expand)
+
+● Advising using Opus 4.8
+  ⎿  √ Advisor has reviewed the conversation and will apply the feedback
+     (ctrl+o to expand)
+
+  Searched for 2 patterns, read 1 file (ctrl+o to expand)
+
+● 2 background agents launched (↓ to manage)
+   ├ odysseus-mapper: Map Odysseus agent subsystem
+   └ pi-mapper: Map pi integration surfaces
+
+● While those map the breadth, I'll read the three seam-critical pi docs myself
+  (per the advisor's guidance — integration claims need first-hand
+  verification):
+
+  Read 3 files (ctrl+o to expand)
+
+> /remote-control
+  ⎿  Remote Control connecting…
+
+● Seam files verified first-hand. Three load-bearing facts now confirmed:
+
+  ★ Insight ─────────────────────────────────────
+  1. Pi's RPC mode is purpose-built for exactly this embedding — JSONL over
+  stdin/stdout with prompt/steer/abort/fork/compact commands and streamed         text_delta/tool_execution_* events (packages/coding-agent/docs/rpc.md:3), and
+  the doc ships a working Python subprocess client (rpc.md:1316-1350) —
+  Odysseus's native language.
+  2. Skills are format-compatible by design: pi implements the agentskills.io     (https://agentskills.io/specification) standard — SKILL.md + name/description   frontmatter (docs/skills.md:7) — and explicitly supports loading skill dirs
+  from other harnesses via settings (skills.md:43-62). If Odysseus's skills use
+  the same shape, they're shareable verbatim.
+  3. Pi can consume Odysseus-served models: pi.registerProvider() with api:       "openai-completions" pointed at any local /v1 endpoint, including dynamic
+  model discovery by fetching /v1/models (docs/custom-provider.md:100-130) —
+  which is precisely what Odysseus's Cookbook (vLLM/llama.cpp) exposes.
+  ─────────────────────────────────────────────────
+
+  The two mapping agents are still sweeping both repos (Odysseus's agent
+  loop/tools/MCP/memory internals, and pi's full integration surface). When they
+  report back I'll cross-check their claims against the seam files I've read
+  and write the grounded integration assessment — including the unresolvable
+  issues marked as such. I'll continue as soon as they finish.
+
+✻ Waiting for 2 background agents to finish
+
+※ recap: Assessing whether pi (TypeScript coding agent) can integrate with        Odysseus as an agent backend; pi's RPC mode, skills format, and provider
+  config all look compatible. Next: wait for the two repo-mapping agents to       finish, then write the grounded assessment. (disable recaps in /config)
+
+● Agent "Map pi integration surfaces" completed · 36m 50s
+
+● Pi-side map is in — and it's thorough. Highlights beyond what I'd already
+  verified first-hand:
+
+  - RPC mode has 27 commands + 16 event types and is the documented embedding
+  path for non-Node hosts (docs/rpc.md) — low complexity, any language.
+  - MCP is deliberately absent from pi core (docs/design-rationale.md:15-19) —
+  relevant because Odysseus ships mcp_servers/. An extension can add MCP, but
+  it's a swim-upstream move.
+  - No permission system/sandbox — pi runs with full user permissions; the
+  documented mitigation is containerization (docs/containerization.md). That's a  serious consideration for embedding in a multi-user web app like Odysseus.
+  - Node.js ≥ 22.19 required; Windows needs Git Bash (which Odysseus's own
+  Windows agent-shell path also requires — a shared prerequisite, conveniently).
+  - models.json lets pi consume any OpenAI-compatible endpoint
+  (Ollama/vLLM/llama.cpp) with hot-reload — no extension needed for the simple
+  case.
+
+  Still waiting on the Odysseus-side mapper (agent loop, tools, MCP usage,
+  skills format, memory, Cookbook endpoints). Once it lands I'll cross-check
+  both against the seam files and write the full integration assessment.
+
+✻ Waiting for 1 background agent to finish
+
+● Agent "Map Odysseus agent subsystem" completed · 47m 39s                      
+● Both maps are in. Before synthesizing, two quick first-hand verifications of
+  seam claims — the skills format compatibility and the existing
+  external-coding-agent integration precedent (integrations/claude,
+  integrations/codex):
+
+  Searched for 1 pattern, read 1 file (ctrl+o to expand)
+
+● The integrations directory is the decisive find — Odysseus already ships
+  coding-agent integrations as skills with an API script. Let me read it:
+
+  Searched for 1 pattern, read 2 files (ctrl+o to expand)
+
+● All facts verified. One last detail — pi's license (matters for
+  bundling/distribution claims):
+
+  Searched for 1 pattern, read 1 file (ctrl+o to expand)
+                                                                                ● MIT, Mario Zechner. Everything's verified. Writing the full grounded
+  assessment now:
+
+● Write(.ignore\odysseus-pi-integration-assessment.md)
+  ⎿  Wrote 127 lines to .ignore\odysseus-pi-integration-assessment.md
+      2 # Odysseus × pi — Integration Assessment
+      4 **Status:** Exploration only — no implementation. Every claim bel
+        ow is grounded in a file in one of the two local repos; unresolve
+      5 d issues are marked **⚠ UNRESOLVED** or **⚠ FRICTION**.
+      6 **Repos examined:**
+        ollection\odysseus-dev` ([github.com/pewdiepie-archdaemon/odysseu
+        1+ / FastAPI self-hosted AI workspace: chat, native agent, Cookbo
+        ok model serving, deep research, memory/skills, email/calendar/no
+      8 - **pi** — `C:\Users\simon\Downloads\collections\pi_collection\pi
+        _arch
+     … +314 lines (ctrl+o to expand)
+
+● Report written. Final advisor check before declaring done:
+
+● Advising using Opus 4.8
+  ⎿  √ Advisor has reviewed the conversation and will apply the feedback
+     (ctrl+o to expand)
+
+● Fair point — verifying the B2 citations first-hand:
+
+  Searched for 1 pattern, read 1 file (ctrl+o to expand)
+
+● Update(.ignore\odysseus-pi-integration-assessment.md)
+  ⎿  Added 1 line, removed 1 line
+      71
+      72  This is the most important finding in the whole assessment.
+      73
+      74 -- **Odysseus** is **multi-user** with per-user privileges enfor                -ced at tool-dispatch time: shell/filesystem/email tools are adm
+         -in-only via a fail-closed deny list (`src/tool_security.py:NON_                -ADMIN_BLOCKED_TOOLS`), plan mode flips to a read-only allow-lis
+         -t (`docs/concepts/agent-and-tools.md:64-68`), and its threat mo
+         -del treats the app as an admin console (`README.md:137-147`, `T
+         -HREAT_MODEL.md`).
+      74 +- **Odysseus** is **multi-user** with per-user privileges enfor
+         +ced at tool-dispatch time: shell/filesystem/email tools are adm
+         +in-only via a fail-closed deny list (`NON_ADMIN_BLOCKED_TOOLS`,
+         + `src/tool_security.py:14`; unmatchable tool names are treated
+         +as blocked rather than allowed, `tool_security.py:153-161`, and
+         + the entire `mcp__*` namespace is non-admin-blocked). Plan mode
+         + flips the gate to a read-only allow-list — *"shell is blocked
+         +outright — you can't constrain `bash` to read-only"* (`docs/con
+         +cepts/agent-and-tools.md:64-68`). Its threat model treats the a
+         +pp as an admin console (`README.md:137-147`, `THREAT_MODEL.md`)
+         +.
+      75  - **pi** has **no permission system by design**: *"Pi runs with
+           your user's permissions and has no built-in permission system.
+           For boundaries, run it in a container"* (`docs/what-is-pi.md:6
+          3`; `docs/design-rationale.md` — permission popups deliberately
+           rejected; mitigation: `docs/containerization.md`).
+      76
+      77  Embedded naively, every pi session executes `bash`/`write`/`edi
+          t` **as the Odysseus server process**, for any user allowed to
+          open a coding session — bypassing every gate in `tool_security.
+          py`. There is no configuration in either project that closes th
+          is. The only honest mitigations are *engineering*, and each is
+          marked:
+
+● Odysseus × pi integration assessment — grounded in both repos, unresolved
+  issues marked
+
+  › [file] .ignore\odysseus-pi-integration-assessment.md (16.1KB)
+
+● Done. The full assessment is saved at
+  .ignore/odysseus-pi-integration-assessment.md. Here's the short version:
+
+  Verdict: Yes, they compose — but asymmetrically
+
+  The framing everyone would assume is wrong. Odysseus's README says its agent
+  is "built on opencode," but ACKNOWLEDGMENTS.md:22-26 reveals opencode's
+  patterns were ported into native Python (src/agent_loop.py) — there's no
+  embedded agent runtime to swap pi into. So the analysis splits into two
+  directions:
+
+  Direction A — pi as a client of Odysseus: nearly free, high value
+
+  1. Odysseus's Claude Code integration transfers to pi almost verbatim.
+  Odysseus ships its agent integration as an Agent Skill
+  (integrations/claude/skills/odysseus/SKILL.md + API script) calling the
+  scope-gated /api/codex/* REST API. Pi implements the same agentskills.io
+  standard and explicitly documents loading ~/.claude/skills (skills.md:43-62).
+  One settings line + two env vars → pi gets todos, email, calendar, memory,
+  documents, Cookbook — all enforced server-side by Odysseus tokens.
+  2. Pi runs on Cookbook-served models. Odysseus's vLLM/llama.cpp serves are
+  OpenAI-compatible; pi consumes them via one models.json entry
+  (models.md:18-35). One GPU, one model pool, two tools.
+
+  Direction B — Odysseus embeds pi as a coding-agent backend: feasible, but
+  gated
+
+  Pi's RPC mode (JSONL over stdio, 27 commands, streamed deltas, with a Python
+  client example in pi's own docs) maps cleanly onto Odysseus's existing SSE
+  chat streaming and subprocess-management precedents. But one issue is marked ⚠
+  UNRESOLVED: Odysseus enforces fail-closed per-user tool gating
+  (src/tool_security.py:14 — verified first-hand), while pi by design has no
+  permission system at all (what-is-pi.md:63). Embedded naively, every pi
+  session gets full server-process shell access, bypassing every Odysseus gate.
+  Mitigations exist (admin-only sessions, containers, a tool-intercepting pi
+  extension) but all require engineering decisions no config can substitute for.
+
+  Also marked: Node ≥22.19 dependency (⚠ friction), duplicated
+  session/skill/model state (⚠ friction), skill-lifecycle one-way street (⚠
+  unresolved), and MCP deliberately rejected by pi — the REST API is the right
+  bridge, not MCP.
+
+  ★ Insight ─────────────────────────────────────
+  The deepest compatibility here isn't technical, it's philosophical convergence
+  from opposite directions: pi rejected MCP in favor of "CLI tools + skills +
+  bash" (design-rationale.md:15-19), and Odysseus independently built its
+  external-agent surface as exactly that — a skill wrapping a scoped HTTP API.
+  Two projects that never planned to interoperate ended up sharing an
+  integration grammar, which is why Direction A costs ~nothing.
+  ─────────────────────────────────────────────────
+
+  Three open questions at the end of the report need your call — chiefly: is the
+  goal pi-for-you-the-admin, or coding-agent-for-all-Odysseus-users? That
+  answer decides whether Direction B is a weekend or a project.
+
+✻ Churned for 55m 12s
+
+> My ideal is somehow pi runs inside Odysseus as a general agent not just for     coding                                                                                                                                                        ● That's a sharper, more ambitious target: pi not as a coding sidecar, but as
+  the agent runtime under Odysseus's UI. Before I assess it, two facts decide
+  feasibility and I haven't verified them yet: (1) can pi's coding-oriented
+  system prompt be replaced for general-agent use, and (2) can pi's core tools
+  (especially bash) be restricted per-session in RPC mode — that's the linchpin
+  for the multi-user security question. Checking pi's docs directly:
+
+  Searched for 3 patterns (ctrl+o to expand)
+
+● Both linchpins exist. One more check — the exact CLI flags available when
+  spawning pi --mode rpc (that's how Odysseus would launch it):
+
+  Searched for 1 pattern (ctrl+o to expand)
+                                                                                ● Update(.ignore\odysseus-pi-integration-assessment.md)
+  ⎿  Added 61 lines
+      106
+      107  ---
+      108
+      109 +## Direction B′ (user's stated ideal): pi as the *general* age                 +nt runtime inside Odysseus — not just for coding
+      110 +
+      111 +> Added 2026-06-07 after the user clarified the goal: pi runs
+          +inside Odysseus as a general agent (todos, email, calendar, me
+          +mory, research, …), not a coding sidecar.
+      112 +
+      113 +### B′1. Pi is genuinely repurposable as a general agent — ver
+          +ified, not assumed
+      114 +
+      115 +Pi's "coding agent" identity lives in its default system promp
+          +t and four default tools, **both replaceable at spawn time** (
+          +all flags verified in `packages/coding-agent/docs/usage.md`):
+      116 +
+      117 +| Lever | Flag / API | Source |
+      118 +|---|---|---|
+      119 +| Replace the coding persona | `--system-prompt <text>` — *"Re
+          +place default prompt; context files and skills are still appen
+          +ded"* | `usage.md:229` |
+      120 +| Append instead | `--append-system-prompt <text>` | `usage.md
+          +:230` |
+      121 +| Allowlist tools per session | `--tools <list>` — built-in, e
+          +xtension, and custom tools | `usage.md:198` |
+      122 +| Disable all built-ins | `--no-tools` | `usage.md:201` |
+      123 +| Load a custom toolset | `-e / --extension <source>` (path, n
+          +pm, or git; repeatable) | `usage.md:209` |
+      124 +| Control skills | `--skill <path>` / `--no-skills` | `usage.m
+          +d:211-212` |
+      125 +| Per-turn prompt rewriting | `before_agent_start` extension e
+          +vent — *"can inject message, modify system prompt"* | `extensi
+          +ons.md:282,468-501` |
+      126 +| Dynamic tool switching | `pi.setActiveTools([...])` from an
+          +extension | `extensions.md:1687` |
+      127 +
+      128 +So the spawn line Odysseus would use is, schematically:
+      129 +
+      130 +```
+      131 +pi --mode rpc --session-dir <per-user dir> \
+      132 +   --system-prompt "<Odysseus general-agent persona>" \
+      133 +   --tools <per-user allowlist> \
+      134 +   -e <odysseus-bridge extension> \
+      135 +   --no-skills --skill <curated odysseus skills>
+      136 +```
+      137 +
+      138 +(NOT implemented — this is the shape the verified flags permit
+          +.)
+      139 +
+      140 +### B′2. The architecture: pi = loop/runtime, Odysseus = all t
+          +ools + policy
+      141 +
+      142 +The key design move: **don't give pi Odysseus's powers via bas
+          +h — give it an extension whose tools call Odysseus's scoped AP
+          +I.** A single TS extension (`odysseus-bridge`) registers nativ
+          +e pi tools (`manage_todos`, `send_email`, `manage_calendar`, `
+          +manage_memory`, `trigger_research`, …) via `pi.registerTool()`
+          + (`extensions.md:1683-1687`), each implemented as an HTTP call
+          + to the existing scope-gated `/api/codex/*` API (`integrations
+          +/claude/README.md:28-36`) using a per-user `ody_…` token passe
+          +d in the subprocess env. Custom tools support streaming progre
+          +ss via `onUpdate` and abort via `ctx.signal` (`docs/custom-pro
+          +vider.md` / `extensions.md` examples).
+      143 +
+      144 +**This dissolves the B2 security collision for Odysseus-data t
+          +ools**, because enforcement returns to where Odysseus already
+          +does it: server-side scope checks per token (`integrations/cla
+          +ude/README.md:32-36` — "even if Claude tries to call a forbidd
+          +en endpoint, it gets 403"). The pi process becomes a *client*
+          +of Odysseus's policy, exactly like the Claude Code integration
+          + — just running as a subprocess instead of in a terminal.
+      145 +
+      146 +The residual host-access risk is handled at spawn: **non-admin
+          + sessions get `--tools` allowlists that exclude `bash`, `read`
+          +, `write`, `edit` entirely** (pi's own built-ins touch the ser
+          +ver filesystem as the server user — they must be absent, not m
+          +erely discouraged). Admin sessions can include them, mirroring
+          + Odysseus's existing rule that shell is admin-only (`src/tool_
+          +security.py:14`).
+      147 +
+      148 +What pi contributes as the runtime, which Odysseus's native lo
+          +op (`src/agent_loop.py`) lacks:
+      149 +- **Native provider tool-calling** (structured function calls
+          +via `openai-completions`) instead of regex-parsed fenced block
+          +s (`src/tool_parsing.py`)
+      150 +- **Context compaction** — auto + manual, with overflow retry
+          +(`rpc.md:354-393, 909-938`)
+      151 +- **Session trees** — fork/branch/clone, resumable JSONL (`doc
+          +s/session-format.md`)
+      152 +- **Mid-session model switching** + per-session cost/token sta
+          +ts (`rpc.md:217-277, 498-535`)
+      153 +- **Steering and follow-up queues** with delivery-mode control
+          + (`rpc.md:80-122, 318-350`)
+      154 +
+      155 +### B′3. What is lost or must be rebuilt — marked honestly
+      156 +
+      157 +- **⚠ UNRESOLVED — weak-local-model reliability.** Odysseus's
+          +loop was *designed around small local models*: regex-parsed to
+          +ol blocks work even when a model can't emit clean function-cal
+          +l JSON, and the teacher-escalation system (`src/teacher_escala
+          +tion.py`) exists precisely because small models fail. Pi's run
+          +time assumes provider-native tool calling. Whether a 7B GGUF s
+          +erved by llama.cpp drives pi's tool loop acceptably is **an em
+          +pirical question neither repo answers**. If the answer is no,
+          +B′ quietly becomes "general agent for API/large models only,"
+          +which contradicts Odysseus's local-first identity. This is the
+          + biggest open risk of B′.
+      158 +- **⚠ UNRESOLVED — the learning loop detaches.** Teacher escal
+          +ation, skill distillation from sessions, LLM-as-judge skill te
+          +sting, memory auto-capture (`docs/concepts/memory-and-skills.m
+          +d:55-63`) are all wired into *Odysseus's* loop. Sessions runni
+          +ng inside pi bypass them. Rebuilding them as pi extensions or
+          +post-session analyzers is possible in principle (pi emits full
+          + transcripts) but is unscoped new work in both ecosystems.
+      159 +- **Plan mode** must be re-implemented: spawn-time `--tools` c
+          +overs session-level read-only, but Odysseus's *mid-session* pl
+          +an toggle (`routes/chat_routes.py` `plan_mode` param) would ne
+          +ed `pi.setActiveTools()` driven through an extension command,
+          +or a session respawn.
+      160 +- **Memory injection per prompt** (`src/chat_processor.py` hyb
+          +rid retrieval before every LLM call) needs a `before_agent_sta
+          +rt` extension handler calling Odysseus's memory API — straight
+          +forward per the docs (`extensions.md:468-501`), but new TS cod
+          +e.
+      161 +- **⚠ FRICTION — process-per-session.** One Node process (≥22.
+          +19) per active agent session, spawned/reaped by Odysseus. Prec
+          +edent exists (`src/bg_jobs.py` manages Cookbook serves with PI
+          +D/exit files), but the resource profile of N concurrent Node p
+          +rocesses on a small self-hosted box is untested.
+      162 +- **⚠ FRICTION — two session stores remain** (SQLite `Session`
+          + vs pi JSONL trees); the bridge must treat one as canonical (l
+          +ikely: pi JSONL canonical for agent sessions, mirrored into SQ
+          +Lite for UI listing).
+      163 +
+      164 +### B′4. Incremental path (exploration only — ordering, not a
+          +plan)
+      165 +
+      166 +1. **Phase 0 (config-only, today):** A1 + A2 — pi beside Odyss
+          +eus, sharing models and the scoped API skill. Validates the AP
+          +I surface and token scopes under pi.
+      167 +2. **Phase 1 (small):** Odysseus spawns `pi --mode rpc` for an
+          + **admin-only "Code Agent"** session type with stock pi tools;
+          + Python RPC client + SSE bridge. Validates process lifecycle,
+          +streaming translation, abort/steer.
+      168 +3. **Phase 2 (the real build):** `odysseus-bridge` extension +
+          + per-user `--tools` gating + custom system prompt → general ag
+          +ent for all users. Gate on the B′3 local-model question *first
+          +* — test pi's tool loop against the user's typical local model
+          +s before committing.
+      169 +
+      170  ## Verdict
+      171
+      172  **Yes, they compose into a meaningful suite — but asymmetrical
+           ly.**
+
+● Update(.ignore\odysseus-pi-integration-assessment.md)
+  ⎿  Added 3 lines, removed 2 lines
+      183
+      184  ## Open questions for the user (cannot be resolved from the re
+           pos)
+      185
+      186 -1. **B-scope:** is the goal "pi for me, the admin" (B2-mitigat
+          -ion 1 suffices) or "coding agent for all Odysseus users" (requ
+          -ires containment, B2-mitigation 2/3)?
+      187 -2. **Which direction matters more** — pi using Odysseus (A, ch
+          -eap) or Odysseus hosting pi (B, expensive)? The answer changes
+          - what to prototype first.
+      186 +1. ~~**B-scope:** is the goal "pi for me, the admin" or "codin
+          +g agent for all Odysseus users"?~~ **Answered 2026-06-07:** th
+          +e user's ideal is pi inside Odysseus as a **general agent**, n
+          +ot just coding → see Direction B′. The per-user scoping answer
+          + becomes: bridge-extension tools for everyone (scope-gated ser
+          +ver-side), pi built-ins (`bash`/`read`/`write`/`edit`) admin-o
+          +nly via spawn-time `--tools`.
+      187 +2. ~~**Which direction matters more?**~~ **Answered:** B′ is t
+          +he destination; A remains the zero-cost first step and de-risk
+          +s the API surface (B′4 Phase 0).
+      188  3. **A3 verification:** load one Odysseus skill in a real pi i
+           nstall and confirm the lenient frontmatter parse — 5 minutes w
+           ith both tools installed, impossible from source reading alone
+           .
+      189 +4. **B′ gating question (new, empirical):** do the user's typi
+          +cal local models (small GGUFs via llama.cpp/Ollama) drive pi's
+          + native function-calling tool loop reliably? If not, B′ serves
+          + API/large models only — test before building Phase 2.
+
+● Report updated with Direction B′ — your ideal, assessed. Here's the picture:
+
+  Your ideal is viable — and cleaner than the coding-only version
+
+  Pi's "coding agent" identity is just its default config, and every piece is     replaceable at spawn time (all verified in
+  packages/coding-agent/docs/usage.md):
+
+  - --system-prompt replaces the coding persona entirely (usage.md:229)
+  - --tools <list> allowlists which tools each session gets (usage.md:198)
+  - -e <extension> loads a custom toolset (usage.md:209)
+
+  So the architecture for "pi as Odysseus's general agent" is:
+
+  ┌──────────── Odysseus (FastAPI) ────────────┐
+  │  Web UI ──SSE──┐                           │
+  │                ▼                           │
+  │   RPC bridge (Python, new)                 │
+  │        │ JSONL stdin/stdout                │
+  │        ▼                                   │
+  │   pi --mode rpc                            │
+  │     --system-prompt "<general persona>"    │
+  │     --tools <per-user allowlist>           │
+  │     -e odysseus-bridge.ts  ◄── the one     │
+  │            │                   new artifact│
+  │            ▼ HTTP + ody_ token             │
+  │   /api/codex/* (scope-gated, EXISTS) ──────┤
+  │   todos·email·calendar·memory·research     │
+  └────────────────────────────────────────────┘
+
+  Pi = the loop runtime (compaction, session trees, steering, model-switching,
+  cost tracking — all things src/agent_loop.py lacks). Odysseus = all tools +
+  all policy, via one TS bridge extension whose tools are HTTP calls to the
+  scoped API that already exists and already enforces scopes server-side
+  (integrations/claude/README.md:32-36).
+
+  ★ Insight ─────────────────────────────────────
+  This design dissolves the security collision I'd marked unresolved, rather
+  than mitigating it. The danger was pi's unrestricted built-ins running as the
+  server user. But if non-admins' sessions are spawned with --tools excluding
+  bash/read/write/edit, their only tool surface is the bridge — and every bridge
+  call hits Odysseus's existing 403-enforcing token scopes. Policy enforcement
+  returns to the place Odysseus already does it. Pi stops being a security
+  problem the moment it stops being trusted.
+  ─────────────────────────────────────────────────
+
+  The two honest risks (both marked in the report)
+
+  1. ⚠ The local-model question — your biggest risk. Odysseus's regex-parsed
+  tool blocks (src/tool_parsing.py) and teacher-escalation exist because small
+  local models can't reliably emit function-call JSON. Pi's runtime assumes
+  provider-native tool calling. Whether a 7B GGUF drives pi's loop acceptably is
+  empirical — neither repo answers it. If the answer is no, B′ becomes "general
+  agent for API/large models only," clashing with Odysseus's local-first
+  identity. Test this before building anything big.
+  2. ⚠ The learning loop detaches. Skill distillation, teacher escalation,
+  LLM-judge skill testing are wired into Odysseus's own loop — pi sessions
+  bypass them unless rebuilt as extensions/post-session analyzers.
+
+  Suggested path (in the report as B′4)
+
+  - Phase 0 (today, config only): pi beside Odysseus with the existing skill
+  bundle + Cookbook models — validates the API under pi for free
+  - Phase 1: admin-only pi RPC session type — validates the Python bridge,
+  streaming, abort/steer
+  - Phase 2: the bridge extension + per-user gating — gated on testing risk #1
+  first
+
+  Want me to leave it here as exploration (per the original mandate), or is the
+  next step designing/spec'ing Phase 0 or the local-model tool-calling test?
+
+✻ Churned for 2m 41s
+
+> Sharpen the roles of Odysseus and pi in this implementation                   
+● Sharpening this into an explicit role contract — who owns what, who must not
+  do what, and the exact touchpoints. Adding it to the report first:
+
+● Update(.ignore\odysseus-pi-integration-assessment.md)
+  ⎿  Added 64 lines
+      152  - **Mid-session model switching** + per-session cost/token sta
+           ts (`rpc.md:217-277, 498-535`)
+      153  - **Steering and follow-up queues** with delivery-mode control
+            (`rpc.md:80-122, 318-350`)
+      154
+      155 +### B′2a. The role contract (sharpened)
+      156 +
+      157 +**One sentence:** Odysseus is the **control plane** — identity
+          +, policy, data, models, UI, lifecycle; pi is the **execution p
+          +lane** — a per-session, disposable, *untrusted* agent loop tha
+          +t owns nothing but the conversation.
+      158 +
+      159 +The analogy that holds up under load: **Odysseus is the operat
+          +ing system, pi is a process.** Odysseus decides what the proce
+          +ss may touch (spawn flags + token scopes), gives it its worldv
+          +iew (system prompt, skills, model), supervises it (PID/health/
+          +reap, as it already does for Cookbook serves via `src/bg_jobs.
+          +py`), and renders its output. Pi just runs the loop well.
+      160 +
+      161 +#### Ownership matrix — single source of truth per concern
+      162 +
+      163 +| Concern | Owner | The other side's role | Grounding |
+      164 +|---|---|---|---|
+      165 +| Turn loop, tool-call cycle, retries | **pi** | Odysseus neve
+          +r re-loops or post-processes turns | `packages/agent` (loop),
+          +`rpc.md:395-421` (retry) |
+      166 +| Context compaction | **pi** | Odysseus may *trigger* (`compa
+          +ct` cmd), never re-implements | `rpc.md:354-393` |
+      167 +| Conversation content (canonical transcript) | **pi** (JSONL
+          +session trees) | Odysseus mirrors *metadata only* (id, name, o
+          +wner, status) into SQLite for listing/search UI | `docs/sessio
+          +n-format.md`; `core/database.py:Session` |
+      168 +| Provider wire protocols (streaming, tool-call encoding, thin
+          +king) | **pi** (`pi-ai`) | Odysseus stops translating provider
+          + quirks for these sessions (`_HarmonyStreamRouter` etc. stay c
+          +hat-only) | `docs/what-is-pi.md:13`; `src/llm_core.py:104-143`
+          + |
+      169 +| Model **catalog, serving, selection** | **Odysseus** (Cookbo
+          +ok + endpoint resolver + Settings) | pi's `models.json` is a *
+          +*generated artifact** Odysseus writes at spawn; pi never disco
+          +vers endpoints itself; `set_model` is driven by Odysseus UI vi
+          +a RPC | `services/hwfit/`, `src/endpoint_resolver.py`; `docs/m
+          +odels.md:18-35` |
+      170 +| Domain tools (todos, email, calendar, memory, documents, res
+          +earch, cookbook, contacts) | **Odysseus** implements + authori
+          +zes | pi sees them only as bridge-extension tools; their bodie
+          +s are HTTP calls to `/api/codex/*` | `extensions.md:1683` (`re
+          +gisterTool`); `integrations/claude/README.md:28-36` |
+      171 +| Host tools (`bash`, `read`, `write`, `edit`) | **pi** built-
+          +ins, **admin sessions only** | Odysseus grants/denies at spawn
+          + via `--tools`; non-admin spawns exclude them entirely | `usag
+          +e.md:198`; mirrors `src/tool_security.py:14` |
+      172 +| Policy & authorization | **Odysseus exclusively**, at two ch
+          +okepoints: spawn-time `--tools` allowlist + server-side token
+          +scopes (403) | pi is **untrusted by design** — it has no permi
+          +ssion system to delegate to | `what-is-pi.md:63`; `integration
+          +s/claude/README.md:32-36` |
+      173 +| Identity & multi-tenancy | **Odysseus** (users, privileges,
+          +per-user tokens, per-user `--session-dir`) | pi is single-user
+          + per process; one process = one user = one session | `core/aut
+          +h.py`; `rpc.md:18` (`--session-dir`) |
+      174 +| Persona / system prompt | **Odysseus** composes (general-age
+          +nt persona + user prefs + injected memories) and passes `--sys
+          +tem-prompt` | pi appends skills/context files but never author
+          +s the persona | `usage.md:229` |
+      175 +| Memory (store, retrieval, ranking) | **Odysseus** (ChromaDB
+          ++ keyword hybrid) | pi receives memories as prompt content (vi
+          +a persona or `before_agent_start` bridge handler) and writes t
+          +hem back only through the bridge tool | `src/chat_processor.py
+          +:24-31`; `extensions.md:468-501` |
+      176 +| Skills library & lifecycle (testing, caps, dedup, distillati
+          +on) | **Odysseus** (`data/skills/`) | pi *consumes* a curated
+          +set via `--skill`/`--no-skills`; pi-authored skills land in a
+          +staging dir for Odysseus's lifecycle to adopt | `memory-and-sk
+          +ills.md:49-63`; `usage.md:211-212` |
+      177 +| MCP | **Odysseus only** | pi never speaks MCP (by its own de
+          +sign); MCP-server tools reach pi proxied through the bridge li
+          +ke any domain tool | `src/mcp_manager.py`; `design-rationale.m
+          +d:15-19` |
+      178 +| UI, notifications, mobile | **Odysseus** (web/PWA, SSE, ntfy
+          +) | pi runs headless; its dialog requests (`extension_ui_reque
+          +st`) render as Odysseus UI prompts | `rpc.md:985-1175` |
+      179 +| Process lifecycle (spawn, health, reap, restart) | **Odysseu
+          +s** (extends `src/bg_jobs.py` pattern) | pi is disposable; cra
+          +sh = respawn + `switch_session` to the same JSONL | `rpc.md:56
+          +4-580` |
+      180 +| Scheduling / automation | **Odysseus** (cron tasks, webhooks
+          +) | scheduled jobs run pi one-shots (`pi --mode json -p`) or f
+          +eed prompts into a session via RPC | `src/task_scheduler.py`;
+          +`docs/json.md` |
+      181 +| Cost/token accounting | **pi computes** (`get_session_stats`
+          +), **Odysseus displays & aggregates** across users | | `rpc.md
+          +:498-535` |
+      182 +
+      183 +#### Anti-responsibilities — what each side must NOT do (this
+          +is what makes the roles sharp)
+      184 +
+      185 +**pi must not:**
+      186 +1. Hold any credential other than its one per-session scoped `
+          +ody_` token (env var). No provider API keys in pi's `auth.json
+          +` — model access goes through endpoints Odysseus configured.
+      187 +2. Discover or choose endpoints/models on its own; `models.jso
+          +n` is Odysseus-generated, read-only in spirit.
+      188 +3. Touch the host filesystem or shell in non-admin sessions —
+          +enforced by absence (`--tools`), not by trust.
+      189 +4. Persist anything outside its assigned `--session-dir`.
+      190 +5. Be reached by anything other than its parent Odysseus proce
+          +ss (stdio only; no ports).
+      191 +
+      192 +**Odysseus must not:**
+      193 +1. Re-implement loop mechanics for pi sessions — no second too
+          +l-dispatch layer, no regex re-parsing of pi's output (`src/too
+          +l_parsing.py` stays with the native loop).
+      194 +2. Mutate pi's JSONL transcripts; read-only mirroring into SQL
+          +ite metadata.
+      195 +3. Duplicate policy inside the bridge extension — the extensio
+          +n stays a *thin* HTTP shim so that every authorization decisio
+          +n happens server-side where it's already tested (`403` semanti
+          +cs, `integrations/claude/SKILL.md:32`). A fat, "smart" extensi
+          +on would become a second policy engine — the exact failure mod
+          +e to avoid.
+      196 +4. Let chat-mode features (memory injection mid-loop, teacher
+          +fallback) reach into pi's turns; for pi sessions these become
+          +spawn-time inputs or bridge tools, never loop surgery.
+      197 +
+      198 +#### The four (and only four) touchpoints
+      199 +
+      200 +```
+      201 +1. SPAWN      Odysseus → pi   CLI flags + env        (--system
+          +-prompt, --tools, -e bridge,
+      202 +                                                      --sessio
+          +n-dir, ODYSSEUS_URL, ODY_TOKEN)
+      203 +2. RPC        Odysseus ↔ pi   JSONL over stdio        (prompt/
+          +steer/abort/set_model …
+      204 +                                                      ← events
+          +, extension_ui_request)
+      205 +3. BRIDGE     pi → Odysseus   HTTPS /api/codex/*      (scoped
+          +token; every domain tool call)
+      206 +4. ARTIFACTS  Odysseus → pi   generated files          (models
+          +.json, curated skills dir,
+      207 +                                                      session
+          +JSONL read-back for UI)
+      208 +```
+      209 +
+      210 +Anything that wants to cross between the systems and doesn't f
+          +it one of these four lanes is a design smell — it belongs on t
+          +he Odysseus side of the line.
+      211 +
+      212 +#### Litmus tests for future decisions
+      213 +
+      214 +- *"Should pi know about users?"* → No. One process = one user
+          +'s one session; identity is a spawn-time fact, not a runtime c
+          +oncept.
+      215 +- *"Should the bridge tool check privileges before calling the
+          + API?"* → No. It forwards and reports the 403; the server is t
+          +he only judge.
+      216 +- *"Where does a new capability (e.g. smart-home control) go?"
+          +* → Implement as an Odysseus route + scope, expose through the
+          + bridge. Never as a pi extension with its own credentials.
+      217 +- *"Should pi sessions appear in the regular chat list?"* → Li
+          +sting yes (SQLite mirror); content rendering streams from pi's
+          + transcript — one canonical store per kind of data.
+      218 +
+      219  ### B′3. What is lost or must be rebuilt — marked honestly
+      220
+      221  - **⚠ UNRESOLVED — weak-local-model reliability.** Odysseus's
+           loop was *designed around small local models*: regex-parsed to
+           ol blocks work even when a model can't emit clean function-cal
+           l JSON, and the teacher-escalation system (`src/teacher_escala
+           tion.py`) exists precisely because small models fail. Pi's run
+           time assumes provider-native tool calling. Whether a 7B GGUF s
+           erved by llama.cpp drives pi's tool loop acceptably is **an em
+           pirical question neither repo answers**. If the answer is no,
+           B′ quietly becomes "general agent for API/large models only,"
+           which contradicts Odysseus's local-first identity. This is the
+            biggest open risk of B′.
+
+● Report updated (section B′2a — The role contract). Here's the sharpened
+  division:
+
+  One sentence each
+
+  - Odysseus = the control plane. Identity, policy, data, models, UI, process
+  lifecycle. It decides what pi may touch, composes pi's worldview, supervises
+  it, and renders its output.
+  - pi = the execution plane. A per-session, disposable, untrusted agent loop
+  that owns nothing but the conversation: turns, tool-call cycle, compaction,
+  session tree, provider wire protocols.
+
+  The analogy that survives pressure: Odysseus is the OS; pi is a process.
+
+  The ownership split, condensed
+
+  ┌──────────────────┬──────────────────────────────────────────────────────┐
+  │     pi owns      │                    Odysseus owns                     │
+  ├──────────────────┼──────────────────────────────────────────────────────┤
+  │ Turn loop &      │ All domain tools                                     │
+  │ tool-call cycle  │ (todos/email/calendar/memory/research…) — bridge     │
+  │                  │ calls into /api/codex/*                              │
+  ├──────────────────┼──────────────────────────────────────────────────────┤
+  │ Context          │ Policy — spawn-time --tools + server-side token      │
+  │ compaction       │ scopes, nothing else, nowhere else                   │
+  ├──────────────────┼──────────────────────────────────────────────────────┤
+  │ Canonical        │ Session listing (SQLite metadata mirror), users,     │
+  │ transcript       │ identity                                             │
+  │ (JSONL trees)    │                                                      │
+  ├──────────────────┼──────────────────────────────────────────────────────┤
+  │ Provider         │ Model catalog, serving, selection — pi's models.json │
+  │ streaming        │  is a generated artifact                             │
+  │ protocols        │                                                      │
+  ├──────────────────┼──────────────────────────────────────────────────────┤
+  │ Cost/token       │ Persona (--system-prompt), memory, skills lifecycle, │
+  │ computation      │  MCP, UI, scheduling, spawn/reap                     │
+  └──────────────────┴──────────────────────────────────────────────────────┘
+
+  What makes it sharp: the anti-responsibilities
+
+  pi must not: hold any credential beyond its one scoped session token ·
+  discover endpoints itself · touch host FS/shell in non-admin sessions
+  (enforced by absence via --tools, not trust) · persist outside its session dir
+  · be reachable by anything but stdio.
+
+  Odysseus must not: re-loop or regex-parse pi's turns · mutate pi's transcripts
+  · put policy in the bridge extension — it stays a thin HTTP shim so every
+  authz decision happens server-side where it's already tested · do mid-loop
+  surgery (memory injection and plan toggles become spawn inputs or bridge
+  tools).
+
+  Exactly four touchpoints
+
+  1. SPAWN — CLI flags + env (persona, tool allowlist, token, session dir)
+  2. RPC — JSONL stdio (prompt/steer/abort ⇄ events, UI dialogs)
+  3. BRIDGE — HTTPS /api/codex/* with the scoped token (every domain tool call)
+  4. ARTIFACTS — generated models.json, curated skills dir, transcript read-back
+
+  Anything crossing the boundary outside these four lanes is a design smell.
+
+  ★ Insight ─────────────────────────────────────
+  The sharpest rule in the contract is the one about the bridge staying thin.
+  The moment the bridge extension starts checking privileges before calling the
+  API "to save a round-trip," you have two policy engines that will drift apart
+  — and the TS one is the unaudited copy. Odysseus's 403-on-forbidden-scope
+  semantics (integrations/claude/SKILL.md:32) already encode the right pattern:
+  the client forwards and reports, the server judges. Same reason the --tools
+  gate works: security by absence of capability beats security by in-process
+  good behavior — which is, not coincidentally, pi's own design philosophy
+  applied back at it.
+  ─────────────────────────────────────────────────
+
+  The report also includes litmus tests for future calls ("should pi know about
+  users?" → no; "where does a new capability go?" → Odysseus route + scope,
+  exposed through the bridge — never a pi extension with its own credentials).
+
+  Want me to stop here (the exploration mandate is well covered), or take the
+  next concrete step — e.g., spec the bridge extension's tool surface against
+  the actual /api/codex/* endpoints in routes/codex_routes.py?
+
+✻ Cogitated for 1m 41s
+
+> What do we gain by combining pi and Odysseus that each of them cannot po        ⎿  Interrupted · What should Claude do instead?
+                                                                                > Provide                                                                       
+● The right test for each claimed gain: could either project get this alone by
+  just adding a feature? If yes, it's not a real synergy. Filtering by that
+  test, here's what survives — six genuine gains, each grounded:
+
+  1. A long-horizon agent that actually knows you
+
+  - Odysseus alone: has your life context (memory src/chat_processor.py:24-31,
+  email, calendar, todos) but its loop can't run long — no compaction, max 50
+  rounds (src/agent_tools.py:22), context just fills up.
+  - pi alone: can run for hours — auto-compaction (rpc.md:354-393), session
+  trees — but is amnesiac about you: no memory, no personal data, by deliberate
+  design (what-is-pi.md:61-65).
+  - Combined: "go through this 200-email backlog, update my todos and calendar,
+  maintain a summary doc" becomes runnable. The task needs both durable personal
+  context and a loop that survives 100+ turns. This is the headline gain.
+
+  2. Context-preserving model escalation — Odysseus's best idea, properly
+  realized
+
+  - Odysseus's teacher/student escalation (src/teacher_escalation.py) re-runs a
+  failed task on a stronger model — it restarts, losing the session's
+  accumulated state.
+  - pi's set_model switches models mid-session, keeping the full conversation
+  (rpc.md:217-233; what-is-pi.md:13 — "hand it from Claude to GPT-5
+  mid-session").
+  - Combined: local 7B does the cheap turns; when it stalls, Odysseus's
+  escalation logic issues one RPC command and the big model picks up with
+  everything the small one already learned. Neither has this: Odysseus lacks the
+  portable-context runtime, pi lacks the policy brain deciding when to
+  escalate.
+
+  3. One GPU, one model pool, every surface
+
+  - pi consumes OpenAI-compatible endpoints but cannot create them — no hardware
+  probing, no VRAM-fit scoring, no download/serve (that's Cookbook:
+  services/hwfit/, src/cookbook_serve_lifecycle.py).
+  - Odysseus serves models but has no terminal-grade agent runtime to spend them
+  on.
+  - Combined: Cookbook decides what fits your card and serves it once; chat,
+  research, and the agent all draw from the same VRAM. Two standalone tools
+  would each manage (or fail to manage) models separately.
+
+  4. A policy boundary around an agent that has none
+
+  - pi is single-user, fully trusted, no permission system (what-is-pi.md:63) —
+  it can never safely be given to your family/team or to unattended automation.
+  - Odysseus is multi-user with server-side scoped tokens
+  (integrations/claude/README.md:32-36) and per-user privileges (core/auth.py) —
+  but the agent inside that boundary is its weakest component.
+  - Combined: each user gets a bounded pi — capability-stripped at spawn
+  (--tools, usage.md:198), scope-checked at the API. pi gains an audience it
+  could never have; Odysseus gains a runtime worth bounding.
+
+  5. Scheduled, autonomous agents that reach your phone
+
+  - pi has no scheduler, no notifications, no inbox to watch — someone must sit
+  at the terminal.
+  - Odysseus has cron tasks (src/task_scheduler.py), ntfy push, email triage,
+  webhooks — but only its limited native loop to act on them.
+  - Combined: "every morning at 7, read overnight email, cross-check my
+  calendar, push a briefing to my phone" — Odysseus triggers and notifies, a pi
+  one-shot (pi --mode json -p, docs/json.md) does the multi-step reasoning.
+  Agentic automation, not agentic sessions.
+
+  6. One agent session, every device
+
+  - pi is terminal-only; its sessions are portable JSONL files
+  (docs/session-format.md).
+  - Odysseus is a responsive PWA (README.md:24) with SSE streaming and
+  stop/resume.
+  - Combined: start a task in the terminal at your desk, then steer the same
+  session from your phone — Odysseus spawns pi with switch_session
+  (rpc.md:564-580) on the same file and bridges steer to a mobile UI. Neither
+  project has any path to this alone.
+
+  ★ Insight ─────────────────────────────────────
+  Notice the pattern across all six: every gain pairs Odysseus's stateful
+  periphery (data, models, users, schedule, devices) with pi's stateless core (a
+  loop that runs long and ports across models). That's also why the combination
+  is cheap where it should be expensive: the two projects independently
+  rejected the same things (heavyweight protocols, baked-in workflow) and
+  converged on the same interfaces — SKILL.md, OpenAI-compatible endpoints,
+  scoped HTTP. You're not bridging two philosophies; you're joining two halves
+  that were accidentally designed for each other.
+  ─────────────────────────────────────────────────
+
+  Honest counterweight, per the original mandate: gains #1 and #2 are the only
+  ones where the combination is strictly necessary — the others could in
+  principle be replicated by either project growing the missing half, at much
+  higher cost than integrating. And all six inherit B′'s marked risks unchanged:
+  the small-model tool-calling question and the detached learning loop.
+
+  Want this appended to the report as a "Why combine — emergent gains" section?
+
+✻ Churned for 1m 3s
+
+> Yes please append to the report                                               
+● Update(.ignore\odysseus-pi-integration-assessment.md)
+  ⎿  Added 27 lines
+      231  2. **Phase 1 (small):** Odysseus spawns `pi --mode rpc` for an
+            **admin-only "Code Agent"** session type with stock pi tools;
+            Python RPC client + SSE bridge. Validates process lifecycle,
+           streaming translation, abort/steer.
+      232  3. **Phase 2 (the real build):** `odysseus-bridge` extension +
+            per-user `--tools` gating + custom system prompt → general ag
+           ent for all users. Gate on the B′3 local-model question *first
+           * — test pi's tool loop against the user's typical local model
+           s before committing.
+      233
+      234 +## Why combine — the emergent gains (what neither provides alo
+          +ne)
+      235 +
+      236 +> Added 2026-06-07. Filter applied: a gain only counts if neit
+          +her project could get it alone by simply adding a feature at r
+          +easonable cost. Six survive.
+      237 +
+      238 +### 1. A long-horizon agent that actually knows you *(stronges
+          +t gain)*
+      239 +Odysseus has the life context — hybrid memory (`src/chat_proce
+          +ssor.py:24-31`), email, calendar, todos — but its loop can't r
+          +un long: no compaction, `MAX_AGENT_ROUNDS = 50` (`src/agent_to
+          +ols.py:22`). Pi runs for hours — auto-compaction (`rpc.md:354-
+          +393`), session trees (`docs/session-format.md`) — but is amnes
+          +iac by design: no memory, no personal data (`what-is-pi.md:61-
+          +65`). Combined: tasks like "work through this 200-email backlo
+          +g, update todos and calendar, maintain a summary document" bec
+          +ome runnable. They require *both* durable personal context and
+          + a loop that survives 100+ turns.
+      240 +
+      241 +### 2. Context-preserving model escalation *(second-strongest
+          +gain)*
+      242 +Odysseus's teacher/student escalation (`src/teacher_escalation
+          +.py`) re-runs failed tasks on a stronger model — but it *resta
+          +rts*, discarding session state. Pi's `set_model` switches mode
+          +ls **mid-session with full context retained** (`rpc.md:217-233
+          +`; `what-is-pi.md:13` — "hand it from Claude to GPT-5 mid-sess
+          +ion"). Combined: the local 7B does cheap turns; when it stalls
+          +, Odysseus's escalation policy issues one RPC command and the
+          +strong model continues *with everything the small one already
+          +learned*. Odysseus lacks the portable-context runtime; pi lack
+          +s the policy brain deciding when to escalate.
+      243 +
+      244 +### 3. One GPU, one model pool, every surface
+      245 +Pi consumes OpenAI-compatible endpoints but **cannot create th
+          +em** — no hardware probing, VRAM-fit scoring, or download/serv
+          +e (Cookbook's job: `services/hwfit/`, `src/cookbook_serve_life
+          +cycle.py`). Odysseus serves models but has no terminal-grade a
+          +gent runtime to spend them on. Combined: Cookbook serves what
+          +fits the card once; chat, research, and the agent share the sa
+          +me VRAM.
+      246 +
+      247 +### 4. A policy boundary around an agent that has none
+      248 +Pi is single-user, fully trusted, permissionless (`what-is-pi.
+          +md:63`) — it can never safely be handed to family/team members
+          + or unattended automation. Odysseus is multi-user with server-
+          +side scoped tokens (`integrations/claude/README.md:32-36`) and
+          + per-user privileges (`core/auth.py`) — but its native agent i
+          +s its weakest component. Combined (per the B′2a contract): eac
+          +h user gets a *bounded* pi — capability-stripped at spawn (`--
+          +tools`, `usage.md:198`), scope-checked at the API. Pi gains an
+          + audience it could never have; Odysseus gains a runtime worth
+          +bounding.
+      249 +
+      250 +### 5. Scheduled, autonomous agents that reach your phone
+      251 +Pi has no scheduler, notifications, or inbox-watching — someon
+          +e must sit at the terminal. Odysseus has cron tasks (`src/task
+          +_scheduler.py`), ntfy push, email triage, webhooks — but only
+          +its limited native loop to act on them. Combined: "every morni
+          +ng at 7, read overnight email, cross-check the calendar, push
+          +a briefing to my phone" — Odysseus triggers and notifies; a pi
+          + one-shot (`pi --mode json -p`, `docs/json.md`) does the multi
+          +-step reasoning. Agentic *automation*, not just agentic *sessi
+          +ons*.
+      252 +
+      253 +### 6. One agent session, every device
+      254 +Pi is terminal-only; its sessions are portable JSONL files (`d
+          +ocs/session-format.md`). Odysseus is a responsive PWA (`README
+          +.md:24`) with SSE streaming and stop/resume. Combined: start a
+          + task in the terminal at the desk, then steer the *same sessio
+          +n* from a phone — Odysseus spawns pi with `switch_session` (`r
+          +pc.md:564-580`) on the same file and bridges `steer` (`rpc.md:
+          +80-100`) to the mobile UI. Neither project has any path to thi
+          +s alone.
+      255 +
+      256 +### The pattern, and the honest counterweight
+      257 +Every gain pairs **Odysseus's stateful periphery** (data, mode
+          +ls, users, schedule, devices) with **pi's stateless core** (a
+          +loop that runs long and ports across models). The integration
+          +is cheap where it should be expensive because both projects in
+          +dependently rejected the same things (heavyweight protocols, b
+          +aked-in workflow) and converged on the same interfaces — SKILL
+          +ch higher cost than integrating. All six inherit B′3's marked
+          +risks unchanged: ⚠ the small-model tool-calling question and ⚠
+          + the detached learning loop.
+      260 +
+      261  ## Verdict
+      262
+      263  **Yes, they compose into a meaningful suite — but asymmetrical
+           ly.**
+
+● Final report — now includes Direction B′ (pi as general agent), the role
+  contract, and the six emergent gains
+
+  › [file] .ignore\odysseus-pi-integration-assessment.md (35.1KB)
+
+● Appended. The report at .ignore/odysseus-pi-integration-assessment.md now
+  reads as a complete arc:
+
+  1. §0 — Framing correction (opencode was ported, not embedded)
+  2. Direction A — pi as client: skill bundle + Cookbook models (config-only,
+  works today)
+  3. Direction B — pi as coding backend via RPC (original analysis, security
+  collision marked)
+  4. Direction B′ — your ideal: pi as the general agent runtime, with the
+  verified spawn-flag levers
+  5. B′2a — the sharpened role contract: ownership matrix,
+  anti-responsibilities, the four touchpoints, litmus tests
+  6. Why combine — the six emergent gains, with the honest counterweight that
+  only #1 (long-horizon agent that knows you) and #2 (context-preserving model
+  escalation) strictly require the combination
+  7. Verdict + open questions — two answered by you, two still open: the A3
+  frontmatter verification and the B′ gating question (do your local models
+  drive pi's native tool-calling reliably?)
+
+  That last one is the single highest-leverage next step — it's empirical, takes
+  maybe an hour with pi installed against an Ollama/llama.cpp endpoint, and its
+  answer determines whether B′ serves your local-first setup or only API
+  models. Worth doing before any bridge code gets designed.
+
+✻ Churned for 51s
+
+──────────────────────────────────────────────────────────────────── odysseus ──> yes read the pi docs and assess integration potential
+────────────────────────────────────────────────────────────────────────────────  | Opus 4.8 (1M context) | odysseus-dev | ctx 18% | 5h 7% | 7d 27% |
+  ⏵⏵ bypass permissions on (shift+tab to cycle)
+                                        new task? /clear to save 180.1k tokens
+                                                         Remote Control active
+
+
+> i moved odysseus-pi-integration-assessment.md into docs/.  in that document,    add a beginning section, introducing what odysseus and pi are, grounding the    subsequent discussion.
+
+  Read 1 file (ctrl+o to expand)
+
+● Update(docs\odysseus-pi-integration-assessment.md)
+  ⎿  Added 46 lines
+       9
+      10  ---
+      11
+      12 +## Introduction: the two systems                                            13 +
+      14 +This section introduces both projects on their own terms, so th
+         +e integration arguments that follow have a shared foundation. C
+         +itations are to files in the two local repos listed above; pi p
+         +aths are relative to `pi-main/`, Odysseus paths to the repo roo
+         +t.
+      15 +
+      16 +### What Odysseus is
+      17 +
+      18 +Odysseus is a **self-hosted AI workspace** — "the self-hosted v
+         +ersion of the UI experience you get from ChatGPT and Claude … l
+         +ocal-first, privacy-first" (`README.md:11`). It is a single Pyt
+         +hon 3.11+ / FastAPI application (`app.py`, `requirements.txt`)
+         +serving a responsive web UI/PWA, designed to run on your own ha
+         +rdware and be treated "like an admin console" (`README.md:139-1
+         +41`). Its major subsystems:
+      19 +
+      20 +- **Chat** with any local or API model behind a unified endpoin
+         +t resolver — vLLM, llama.cpp, Ollama, OpenRouter, OpenAI, Anthr
+         +opic, GitHub Copilot (`README.md:14`; `src/endpoint_resolver.py
+         +`, `src/llm_core.py`).
+      21 +- **A native agent**: an in-process Python loop (`src/agent_loo
+         +p.py`) that streams over SSE, parses tool calls from fenced blo
+         +cks by regex (`src/tool_parsing.py`), and dispatches ~80 tools
+         +(shell, files, web, email, calendar, todos, documents, memory,
+         +image generation, research, Cookbook — `src/agent_tools.py:29-6
+         +2`) gated by a fail-closed per-user privilege model (`src/tool_
+         +security.py:14`) and a read-only "plan mode" (`docs/concepts/ag
+         +ent-and-tools.md:64-68`). The loop's *patterns* were adapted fr
+         +om the opencode coding agent (`ACKNOWLEDGMENTS.md:22-26`) — a f
+         +act that matters greatly below.
+      22 +- **Cookbook**: hardware-aware local model management — probes
+         +the GPU, scores what fits in VRAM, downloads models, and serves
+         + them via vLLM/llama.cpp on OpenAI-compatible endpoints, manage
+         +d as supervised background processes (`services/hwfit/`, `src/c
+         +ookbook_serve_lifecycle.py`, `src/bg_jobs.py`).
+      23 +- **Memory and skills**: a dual-index memory (keyword + ChromaD
+         +B vector, blended per-request — `src/chat_processor.py:24-31`)
+         +and a skills library of `SKILL.md` documents with a full lifecy
+         +cle — auto-testing by LLM-as-judge, caps, dedup, and distillati
+         +on of new skills from agent sessions (`docs/concepts/memory-and
+         +-skills.md:47-63`).
+      24 +- **Life-data integrations**: IMAP/SMTP email with AI triage, C
+         +alDAV calendar, notes/todos with reminders, a cron-style schedu
+         +ler, and ntfy/browser/email notification channels (`README.md:2
+         +1-23`; `src/task_scheduler.py`).
+      25 +- **Deep research**: a multi-step gather/read/synthesize pipeli
+         +ne adapted from Tongyi DeepResearch (`services/research/`, `ACK
+         +NOWLEDGMENTS.md:33-38`).
+      26 +- **Multi-user with scoped external access**: per-user privileg
+         +e profiles (`core/auth.py`), and a scope-gated REST API for ext
+         +ernal agents (`/api/codex/*`) authenticated by `ody_…` bearer t
+         +okens whose scopes are enforced server-side — already shipped a
+         +s integration bundles for Claude Code and Codex (`integrations/
+         +claude/`, `integrations/codex/`, `docs/reference/api-tokens-and
+         +-scopes.md`).
+      27 +
+      28 +Design center: **breadth on a trusted box** — one app that owns
+         + your models, your data, and your automations, with policy enfo
+         +rced at its API boundary.
+      29 +
+      30 +### What pi is
+      31 +
+      32 +Pi is a **terminal coding agent** by Mario Zechner (npm `@earen
+         +dil-works/pi-coding-agent`, MIT — `LICENSE:1-3`), whose declare
+         +d design bet is the opposite of breadth: "pi keeps its core del
+         +iberately minimal and pushes everything else into user-installa
+         +ble extensions" (`docs/what-is-pi.md:3`). The core ships "an ed
+         +itor, a model connection, four tools (`read`, `write`, `edit`,
+         +`bash`), and session management" (`what-is-pi.md:7`). It is a T
+         +ypeScript monorepo of four layered packages, each usable withou
+         +t the ones above it (`what-is-pi.md:20-44`):
+      33 +
+      34 +| Package | Role |
+      35 +|---|---|
+      36 +| `@earendil-works/pi-ai` | Unified streaming LLM API over ~30
+         +providers; a conversation is a plain serializable object, so it
+         + can move between models mid-session (`what-is-pi.md:13`) |
+      37 +| `@earendil-works/pi-agent-core` | The agent loop: tool execut
+         +ion, events, steering, state |
+      38 +| `@earendil-works/pi-coding-agent` | The harness: JSONL sessio
+         +n trees, context files, **compaction**, model switching, auth,
+         +extensions/skills/themes discovery |
+      39 +| `@earendil-works/pi-tui` | The terminal UI (no LLM dependenci
+         +es) |
+      40 +
+      41 +Four run modes matter here: interactive TUI, one-shot print/JSO
+         +N, **RPC** (headless JSONL over stdin/stdout, designed "for emb
+         +edding the agent in other applications" — `packages/coding-agen
+         +t/docs/rpc.md:3`), and a Node.js SDK (`what-is-pi.md:52-59`).
+      42 +
+      43 +Equally important is what pi **deliberately is not** (`what-is-
+         +pi.md:61-65`, `docs/design-rationale.md`): not a sandbox (no pe
+         +rmission system — it runs with the invoking user's full rights;
+         + containment is the user's job), not batteries-included (no MCP
+         +, no built-in subagents, plan mode, or todo lists — each reject
+         +ed with a written rationale and an extension escape hatch), and
+         + not provider-locked. Extensibility is first-class: extensions
+         +can register tools, commands, and even whole model providers, a
+         +nd intercept every loop event including the system prompt (`doc
+         +s/extensions.md`); skills follow the [Agent Skills standard](ht
+         +tps://agentskills.io/specification) (`docs/skills.md:7`).
+      44 +
+      45 +Design center: **depth in a minimal core** — one excellent, mod
+         +el-portable agent loop, trusting its single user completely and
+         + delegating everything else to extensions.
+      46 +
+      47 +### Why these two, together, are worth assessing
+      48 +
+      49 +The pairing is interesting because the projects are **complemen
+         +tary by construction and compatible by accident**:
+      50 +
+      51 +- **Complementary:** Odysseus has everything *around* an agent
+         +(data, models, users, schedule, UI) and a comparatively weak lo
+         +op; pi has arguably the strongest minimal loop in the open-sour
+         +ce field (compaction, session trees, mid-session model switchin
+         +g) and deliberately nothing around it.
+      52 +- **Compatible:** without coordinating, both adopted the same t
+         +hree interfaces — `SKILL.md` agent skills, OpenAI-compatible mo
+         +del endpoints, and plain HTTP+token APIs over heavyweight proto
+         +cols (Odysseus ships its agent integrations as skills, `integra
+         +tions/claude/`; pi rejected MCP for exactly that approach, `des
+         +ign-rationale.md:15-19`).
+      53 +
+      54 +The rest of this document tests that intuition against the actu
+         +al code: first correcting the framing an obvious reading sugges
+         +ts (§0), then assessing the cheap direction (pi as client, §A),
+         + the expensive direction (pi embedded, §B), the user's stated i
+         +deal (pi as Odysseus's general agent runtime, §B′ with its role
+         + contract), and finally what the combination yields that neithe
+         +r system can provide alone.
+      55 +
+      56 +---
+      57 +
+      58  ## 0. The framing correction that shapes everything
+      59
+      60  Odysseus's README says its Agent is "built on opencode" (`READM
+          E.md:15`), which suggests pi could "replace opencode." **That r
+          eading is wrong.** `ACKNOWLEDGMENTS.md:22-26` clarifies opencod
+          e was *"adapted for agent-loop / tool-execution patterns and UI
+           concepts"* — its **ideas were ported into native Python** (`sr
+          c/agent_loop.py`, `src/tool_execution.py`, `src/tool_implementa
+          tions.py`). There is **no opencode runtime, no subprocess, no s
+          wappable agent-backend interface** in Odysseus today (`grep -i
+          opencode` hits only `ACKNOWLEDGMENTS.md`, `README.md`, the lice
+          nse file, and two comments in `src/copilot.py`).
+
+● Done — the introduction is in place at
+  docs/odysseus-pi-integration-assessment.md, between the header block and §0.
+  It covers:
+
+  1. What Odysseus is — the self-hosted workspace framing, then each subsystem
+  the later arguments lean on (native agent loop with regex tool parsing and
+  fail-closed privileges, Cookbook, memory/skills lifecycle, life-data
+  integrations, the scoped /api/codex/* agent API), each with its file anchor.
+  Design center: breadth on a trusted box.
+  2. What pi is — the minimal-core design bet, the four-package layer stack as a
+  table, the four run modes (flagging RPC as the one that matters here), and
+  crucially the "what pi is not" list (no sandbox, no MCP, no batteries) since
+  half the assessment's conclusions hinge on those deliberate omissions. Design
+  center: depth in a minimal core.
+  3. Why assess them together — the one-paragraph thesis the whole document then
+  tests: complementary by construction, compatible by accident — plus a roadmap
+  sentence pointing to §0 → A → B → B′ → emergent gains.
+
+  ★ Insight ─────────────────────────────────────
+  The introduction deliberately mirrors the document's own argumentative
+  structure: each project's description ends with a "design center" one-liner
+  (breadth on a trusted box vs depth in a minimal core), because every
+  subsequent finding — the security collision, the thin-bridge rule, the six
+  emergent gains — is a corollary of exactly that asymmetry. Stating it up front
+  turns the later sections from a list of findings into consequences of one
+  premise.
+  ─────────────────────────────────────────────────
+
+  One housekeeping note now that the file lives in docs/: the "Repos examined"
+  header still contains your local absolute paths
+  (C:\Users\simon\Downloads\...). Fine for a personal working doc — but if docs/
+  ever gets committed or shared, you may want those swapped for the GitHub URLs
+  alone. Want me to make that adjustment?
+
+✻ Cogitated for 1m 12s
+
+※ recap: Goal: assess integrating pi into Odysseus as its general agent runtime.  The full report is done in docs/odysseus-pi-integration-assessment.md,
+  including the new intro. Next action: decide whether I replace the local        Windows paths in its header with GitHub URLs. (disable recaps in /config)
+
+──────────────────────────────────────────────────────────────────── odysseus ──
+> 
+────────────────────────────────────────────────────────────────────────────────
+  | Opus 4.8 (1M context) | odysseus-dev | ctx 18% | 5h 1% | 7d 27% |
+  ⏵⏵ bypass permissions on (shift+tab to cycle) · ← for agents
+                                            ✗ Auto-update failed · Run /doctor
+                                        new task? /clear to save 186.1k tokens
+                                                         Remote Control active
+
+
+
+
+
+ remind me which project is most meaningful by combining odysseus and pi
+
+● Per the report's own filter — which gains strictly require the combination —
+  the answer is Gain #1: a long-horizon agent that actually knows you.
+
+  That's the one to anchor on, because:
+
+  - Odysseus can't reach it alone — its native loop caps out (MAX_AGENT_ROUNDS =
+  50, src/agent_tools.py:22, no compaction). It has the personal context but
+  not the endurance.
+  - pi can't reach it alone — it runs for hours (auto-compaction, session trees)
+  but is amnesiac by design (what-is-pi.md:61-65). It has the endurance but
+  knows nothing about you.
+  - Only the pair clears the bar: tasks like "work through this 200-email
+  backlog, update my todos and calendar, keep a running summary doc" need both
+  durable personal context and a loop that survives 100+ turns. Neither could
+  get there by just adding a feature at reasonable cost.
+
+  The close runner-up is Gain #2: context-preserving model escalation — Odysseus
+  already has the escalation policy (src/teacher_escalation.py) but throws away
+  session state on restart; pi's mid-session set_model (rpc.md:217-233) keeps
+  the full context. Combined, the local model hands off to the strong one with
+  everything it already learned. It's #2 not #1 because it's an efficiency
+  multiplier on the loop, whereas #1 is a capability that simply doesn't exist
+  in either system.
+
+  The other four gains (shared model pool, policy boundary, scheduled
+  phone-reaching agents, cross-device sessions) are real but not strictly
+  emergent — either project could in principle grow the missing half, just more
+  expensively than integrating.
+
+  So: #1 is the headline; #2 is the multiplier. Both trace to the same asymmetry
+  — Odysseus's stateful periphery + pi's stateless, model-portable core — and
+  both inherit the one open risk worth settling first: whether your local models
+  drive pi's native tool-calling reliably (report's open question #4).
+
+✻ Cooked for 53s
+
+──────────────────────────────────────────────────────────────────── odysseus ──> 
+────────────────────────────────────────────────────────────────────────────────  | Opus 4.8 (1M context) | odysseus-dev | ctx 17% | 5h 8% | 7d 28% |
+  ⏵⏵ bypass permissions on (shift+tab to cycle) · ← for agents
+                                            ✗ Auto-update failed · Run /doctor
+                                                         Remote Control active
+
+
+
+
+
+
