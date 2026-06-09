@@ -1,18 +1,4 @@
-# Odysseus
-
-```
-───────────────────────────────────────────────
- ⊹ ࣪ ˖ ૮( ˶ᵔ ᵕ ᵔ˶ )っ  Odysseus vers. 1.0
-───────────────────────────────────────────────
-```
-
-![Odysseus](docs/odysseus.jpg)
-
-A self-hosted AI workspace -- meant to be the self-hosted version of the UI experience you get from ChatGPT and Claude. But with more jank and fun. Running on your own hardware, with your own data -- local-first, privacy-first, and no trojan.
-
----
-
-## 🧪 This repo: the Odysseus × pi experiment
+# 🧪 The Odysseus × pi experiment
 
 > This is an **experiment fork** of [Odysseus](https://github.com/pewdiepie-archdaemon/odysseus) that embeds [**pi**](https://github.com/earendil-works/pi) (a minimal terminal coding agent with a strong, model-portable agent loop) as a **long-horizon, memory-aware agent backend** inside Odysseus. The first commit is unmodified upstream Odysseus; everything after is the experiment.
 
@@ -36,6 +22,18 @@ Odysseus has persistent memory and your data but a shallow agent loop (≤50 rou
 > ⚠️ Experimental and not production-validated end-to-end. The pi backend is admin-only and triggered by sending `mode=pi` to `/api/chat_stream` (no UI selector yet).
 
 ---
+
+# Odysseus
+
+```
+───────────────────────────────────────────────
+ ⊹ ࣪ ˖ ૮( ˶ᵔ ᵕ ᵔ˶ )っ  Odysseus vers. 1.0
+───────────────────────────────────────────────
+```
+
+![Odysseus](docs/odysseus.jpg)
+
+A self-hosted AI workspace -- meant to be the self-hosted version of the UI experience you get from ChatGPT and Claude. But with more jank and fun. Running on your own hardware, with your own data -- local-first, privacy-first, and no trojan.
 
 ## Features
   - **Chat** -- chat with any local model or API; adding them is super simple.<br>　<sub>vLLM · llama.cpp · Ollama · OpenRouter · OpenAI · GitHub Copilot</sub>
