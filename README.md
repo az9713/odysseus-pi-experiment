@@ -10,6 +10,33 @@
 
 A self-hosted AI workspace -- meant to be the self-hosted version of the UI experience you get from ChatGPT and Claude. But with more jank and fun. Running on your own hardware, with your own data -- local-first, privacy-first, and no trojan.
 
+---
+
+## 🧪 This repo: the Odysseus × pi experiment
+
+> This is an **experiment fork** of [Odysseus](https://github.com/pewdiepie-archdaemon/odysseus) that embeds [**pi**](https://github.com/earendil-works/pi) (a minimal terminal coding agent with a strong, model-portable agent loop) as a **long-horizon, memory-aware agent backend** inside Odysseus. The first commit is unmodified upstream Odysseus; everything after is the experiment.
+
+**The goal — "Gain #1": an agent that runs long _and_ knows you.**
+Odysseus has persistent memory and your data but a shallow agent loop (≤50 rounds, no compaction). pi runs for hours (auto-compaction, resumable session trees, mid-session model switching) but is amnesiac by design. Neither alone can *work over your life-data across many turns and remember what it learns* — the combination can. Scope of this experiment: **admin-only, memory-only, local-model-first.**
+
+**How it works.** Odysseus spawns `pi --mode rpc` as a session backend (`mode=pi`), translating pi's event stream into Odysseus's existing SSE chat UI. A thin pi extension (`integrations/pi/extension/odysseus-bridge.ts`) gives the agent a scoped `manage_memory` tool and injects your relevant memories into pi's system prompt every turn. Odysseus stays the control plane (identity, policy, models, memory); pi is the execution plane (the loop). Authorization is enforced server-side by scoped `ody_` tokens — the bridge holds no policy of its own.
+
+**Experiments run (against real `gemma4:e4b` via Ollama):**
+| Test | Result |
+|---|---|
+| Phase 0 — can a small local model drive pi's tool loop? | ✅ tool calls + recall across **8 compaction cycles** |
+| Offline cross-session memory (record in session A → recall in fresh session B) | ✅ **PASS** — recalled purely via memory injection |
+| `pi_backend` module (real model, live event stream) | ✅ PASS (after fixing 2 integration bugs) |
+| Live-server HTTP path (`mode=pi` over the real server) | ⚠️ login + session OK; one config step (endpoint registration) short of full confirmation |
+
+**What we gain (and the honest caveat).** A durable, personal agent neither tool has alone; one shared local-model pool; and a trust boundary around an otherwise permissionless agent. Cost: ~5 files of glue and two bugs that only an end-to-end run surfaced (provider load-order; `DETACHED_PROCESS` breaking subprocess pipes). Worth it **only** for the personal/long-horizon use case — for terminal coding alone, pi by itself is better.
+
+**Read the full story:** [`docs/odysseus-pi-journey.md`](docs/odysseus-pi-journey.md) (goals, tests, what's met and what isn't) · [`docs/odysseus-pi-integration-assessment.md`](docs/odysseus-pi-integration-assessment.md) (analysis + role contract) · [`integrations/pi/README.md`](integrations/pi/README.md) (how to run it).
+
+> ⚠️ Experimental and not production-validated end-to-end. The pi backend is admin-only and triggered by sending `mode=pi` to `/api/chat_stream` (no UI selector yet).
+
+---
+
 ## Features
   - **Chat** -- chat with any local model or API; adding them is super simple.<br>　<sub>vLLM · llama.cpp · Ollama · OpenRouter · OpenAI · GitHub Copilot</sub>
   - **Agent** -- hand it tools and let it run the whole task itself.<br>　<sub>built on [opencode](https://github.com/anomalyco/opencode) · MCP · web · files · shell · skills · memory</sub>
