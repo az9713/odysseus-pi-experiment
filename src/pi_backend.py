@@ -36,7 +36,7 @@ import threading
 from pathlib import Path
 from typing import Any, AsyncGenerator, Optional
 
-from core.platform_compat import detached_popen_kwargs, kill_process_tree
+from core.platform_compat import kill_process_tree
 
 logger = logging.getLogger(__name__)
 
@@ -55,14 +55,50 @@ _DEFAULT_PERSONA = (
 )
 
 
+# Provider name we register in the per-session models.json and select with
+# --provider. Defining the model in models.json (rather than via the extension's
+# registerProvider) is essential: pi resolves --provider at startup, BEFORE
+# extension factories run, so an extension-registered provider is "Unknown" in
+# rpc mode. models.json is read at startup from $PI_CODING_AGENT_DIR.
+_PROVIDER = "odysseuslocal"
+
+
 def _pi_executable() -> str:
     """pi's bin name. On Windows npm installs a ``pi.cmd`` shim on PATH."""
     return "pi.cmd" if os.name == "nt" else "pi"
 
 
-def _session_dir_for(session_id: str) -> Path:
+def _agent_dir_for(session_id: str) -> Path:
+    """Per-session pi config home ($PI_CODING_AGENT_DIR): holds models.json and
+    this session's sessions/ subtree. Isolating it per Odysseus session avoids
+    mutating the user's global ~/.pi/agent and keeps sessions separate."""
     safe = "".join(c for c in session_id if c.isalnum() or c in "-_") or "default"
     return _PI_SESSIONS_DIR / safe
+
+
+def _write_models_json(agent_dir: Path, model_id: str, base_url: str,
+                       context_window: int, max_tokens: int, reasoning: bool = True) -> None:
+    """Write the per-session models.json so --provider/--model resolve at startup."""
+    models = {
+        "providers": {
+            _PROVIDER: {
+                "baseUrl": base_url,
+                "api": "openai-completions",
+                "apiKey": "local",  # local OpenAI-compatible servers ignore this
+                "compat": {"supportsDeveloperRole": False, "supportsReasoningEffort": False},
+                "models": [{
+                    "id": model_id,
+                    "name": model_id,
+                    "reasoning": reasoning,
+                    "input": ["text"],
+                    "cost": {"input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0},
+                    "contextWindow": context_window,
+                    "maxTokens": max_tokens,
+                }],
+            }
+        }
+    }
+    (agent_dir / "models.json").write_text(json.dumps(models, indent=2), encoding="utf-8")
 
 
 def _has_existing_session(session_dir: Path) -> bool:
@@ -104,14 +140,16 @@ async def stream_pi_agent(
         yield "data: [DONE]\n\n"
         return
 
-    session_dir = _session_dir_for(session_id)
+    agent_dir = _agent_dir_for(session_id)
+    session_dir = agent_dir / "sessions"
     session_dir.mkdir(parents=True, exist_ok=True)
+    _write_models_json(agent_dir, model_id, model_base_url, context_window, max_tokens)
 
     argv = [
         _pi_executable(),
         "--mode", "rpc",
         "--session-dir", str(session_dir),
-        "--provider", "odysseus",
+        "--provider", _PROVIDER,
         "--model", model_id,
         "--system-prompt", system_prompt or _DEFAULT_PERSONA,
         "--tools", allowed_tools,
@@ -123,15 +161,18 @@ async def stream_pi_agent(
 
     env = dict(os.environ)
     env.update({
+        "PI_CODING_AGENT_DIR": str(agent_dir),  # so pi reads our per-session models.json
         "ODYSSEUS_URL": odysseus_url,
         "ODYSSEUS_API_TOKEN": api_token,
-        "ODYSSEUS_MODEL_BASE_URL": model_base_url,
-        "ODYSSEUS_MODEL_ID": model_id,
-        "ODYSSEUS_MODEL_CONTEXT": str(context_window),
-        "ODYSSEUS_MODEL_MAXTOKENS": str(max_tokens),
     })
 
     try:
+        # NOTE: do NOT use detached_popen_kwargs() here. On Windows it sets
+        # DETACHED_PROCESS, which detaches the child from the console and breaks
+        # the stdio pipes to the pi.cmd shim — pi then never receives the prompt
+        # and never emits events (the loop hangs on evq.get()). That flag is for
+        # fire-and-forget DEVNULL jobs (bg_jobs.py), not bidirectional RPC. We
+        # own the pipes and reap the tree via kill_process_tree(pid) on exit.
         proc = subprocess.Popen(
             argv,
             stdin=subprocess.PIPE,
@@ -142,7 +183,6 @@ async def stream_pi_agent(
             text=True,
             encoding="utf-8",
             bufsize=1,
-            **detached_popen_kwargs(),
         )
     except FileNotFoundError:
         yield _sse({"delta": "pi is not installed or not on PATH (npm i -g @earendil-works/pi-coding-agent)."})

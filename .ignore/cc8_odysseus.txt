@@ -1,0 +1,1061 @@
+C:\Users\simon\Downloads\collections\odysseus_collection\odysseus-dev\.ignore
+> it has been more than 24 hours. please give me a status of this project.
+  ⎿  14 skills available
+
+● Let me check the result of the validation test that was running, then give you a full status.
+
+  Read 1 file (ctrl+o to expand)
+
+● The test's temp output was cleared after 24h. Let me check the current state of everything — git history, what's still running, and whether I can confirm thevalidation:
+
+● Bash(cd "C:/Users/simon/Downloads/collections/odysseus_collection/odysseus-dev"
+      echo "=== git log ==="; git log --oneline 2>&1 | head -6…)
+  ⎿  Running in the background (↓ to manage)
+
+● Bash(sleep 6; cat "C:\Users\simon\AppData\Local\Temp\claude\C--Users-simon-Downloads-collections-odysseus-collection-odysseus-dev\363e3e2e-e0c4-475a-afa5-f0eb9209982…)
+  ⎿  === git log ===
+     74cbd23 Phase 2: embedded pi RPC backend + chat dispatch wiring
+     b40d19d Phase 1: memory bridge for embedded pi agent
+     … +14 lines (ctrl+o to expand)
+
+● Background command "Gather current project state" completed (exit code 0)
+
+● Good — the durable evidence survived even though the test's stdout didn't. Three commits intact, pi still installed, and data/pi_sessions/sessionA + sessionBexist — proof the cross-session test actually ran
+  both turns. Ollama is down (stopped when the machine idled), so I can't re-run live right now, but I can reconstruct the result from pi's own session transcripts. Let me also check the uncommitted change:
+
+● Bash(cd "C:/Users/simon/Downloads/collections/odysseus_collection/odysseus-dev"
+      echo "=== uncommitted pi_backend.py diff (summary) ==="; git diff --stat src/pi_backe…)
+  ⎿  === uncommitted pi_backend.py diff (summary) ===
+     warning: in the working copy of 'src/pi_backend.py', LF will be replaced by CRLF the next time Git touches it
+      src/pi_backend.py | 13 +++++++++++--
+     … +3 lines (ctrl+o to expand)
+
+● Bash(cd "C:/Users/simon/Downloads/collections/odysseus_collection/odysseus-dev"
+      echo "=== sessionA contents (recursive) ==="; find data/pi_sessions/sessionA -type f…)
+  ⎿  === sessionA contents (recursive) ===
+     (count: 0)
+     === sessionB contents (recursive) ===
+     … +2 lines (ctrl+o to expand)
+                                                    ● Empty — and importantly, mypi_backend code mkdirs those dirs before spawning pi, so their existence only proves the function was called, not that pi ran successfully. pi may have writtensessions to its
+  global dir instead. Let me check, and also whether the test left any trace inthe actual Odysseus memory store:
+
+● Bash(cd "C:/Users/simon/Downloads/collections/odysseus_collection/odysseus-dev"
+      echo "=== global pi sessions (did --session-dir get honored?) ==="; find "C:/Users/si…)
+  ⎿  === global pi sessions (did --session-dir get honored?) ===
+     C:/Users/simon/.pi/agent/sessions/--C--Users-simon-AppData-Local-Temp-pi-spike--/2026-06-08T11-25-01-764Z_019ea6fa-99c4-7d73-89e6-5d14b43ee4a7.jsonl
+     C:/Users/simon/.pi/agent/sessions/--C--Users-simon-AppData-Local-Temp-pi-spike--/2026-06-08T11-27-02-015Z_019ea6fc-6f7f-7c68-a9e4-f30a83475e98.jsonl
+     … +6 lines (ctrl+o to expand)
+                                                    ● Now I have the honest picture. Let me commit the one dangling improvement (the cancel-path hardening I madeafter the Phase 2 commit) so it isn't lost, then give you the status:
+  
+● Bash(cd "C:/Users/simon/Downloads/collections/odysseus_collection/odysseus-dev"
+      git -c user.name="odysseus-dev" -c user.email="odysseus@local" commit -q -m "Phase 2…)
+  ⎿  warning: in the working copy of 'src/pi_backend.py', LF will be replaced by CRLF the next time Git touches it
+     warning: in the working copy of 'src/pi_backend.py', LF will be replaced by CRLF the next time Git touches it
+     ---
+     … +7 lines (ctrl+o to expand)
+
+● Committed — working tree is now clean (4 commits). Here's the full status.
+
+  Project Status — Gain #1 (pi as Odysseus's long-horizon, memory-aware agent)
+
+  Goal: embed pi as an Odysseus session backend (mode="pi") so the agent runs many turns (pi's compaction) and knows you (Odysseus memory). Scope: admin-only, memory-only, local-model-first.
+
+  ✅ Done and verified
+
+  - Phase 0 — GO/NO-GO spike: PASSED. Validated against your real local model gemma4:e4b via Ollama: native tool-calling through pi's RPC path, and recall preserved across 8 compaction cycles in an 11-turn run.
+  (The durable spike transcripts at ~/.pi/agent/sessions/...pi-spike... from 06-08 corroborate this.)
+  - Phase 1 — memory bridge: code complete, committed.
+    - POST /api/codex/memory/search (ranked recall, reuses Odysseus's own scorer) + capabilities advertises it
+    - mint_api_token() helper (in-process scoped-token minting)
+    - integrations/pi/extension/odysseus-bridge.ts — load-tested in pi (provider registers, imports resolve)
+  - Phase 2 — RPC backend + wiring: code complete, committed (+ hardening).
+    - src/pi_backend.py (event translation, Windows-safe subprocess, cancel/cleanup)
+    - dispatch branch in chat_routes.py on mode=="pi"
+    - All edited modules import cleanly in the venv; first-run setup done (DB +admin created)
+
+  ⚠️ The honest gap: end-to-end memory round-trip is UNCONFIRMED
+
+  The definitive cross-session test (record a fact in session A → recall in a fresh session B) was launched, but:
+  - its stdout scorecard was cleared with the 24h temp purge, and
+  - the data/pi_sessions/sessionA|B dirs are empty — and since my code creates those dirs before spawning pi, their existence only proves the function was called, not that the pi runs succeeded. No pi session
+  files were written there, which suggests the e2e spawns may have errored.
+
+  So I cannot claim that test passed. It needs a re-run with output captured — and likely a small debug pass on why those spawns persisted nothing.
+
+  🔧 Blockers to resume
+
+  - Ollama is down (stopped when the machine idled) — must restart it to re-runany live test.
+  Three commits intact, pi still installed, and data/pi_sessions/sessionA +
+  sessionB exist — proof the cross-session test actually ran both turns. Ollama   is down (stopped when the machine idled), so I can't re-run live right now,
+  but I can reconstruct the result from pi's own session transcripts. Let me
+  also check the uncommitted change:
+
+● Bash(cd
+      "C:/Users/simon/Downloads/collections/odysseus_collection/odysseus-dev"
+      echo "=== uncommitted pi_backend.py diff (summary) ==="; git diff --stat
+      src/pi_backe…)
+  ⎿  === uncommitted pi_backend.py diff (summary) ===
+     warning: in the working copy of 'src/pi_backend.py', LF will be replac          ed by CRLF the next time Git touches it
+     … +4 lines (ctrl+o to expand)
+
+● Bash(cd
+      "C:/Users/simon/Downloads/collections/odysseus_collection/odysseus-dev"         echo "=== sessionA contents (recursive) ==="; find
+      data/pi_sessions/sessionA -type f…)
+  ⎿  === sessionA contents (recursive) ===
+     (count: 0)
+     === sessionB contents (recursive) ===
+     … +2 lines (ctrl+o to expand)
+
+● Empty — and importantly, my pi_backend code mkdirs those dirs before spawning
+  pi, so their existence only proves the function was called, not that pi ran
+  successfully. pi may have written sessions to its global dir instead. Let me
+  check, and also whether the test left any trace in the actual Odysseus memory
+  store:
+
+● Bash(cd
+      "C:/Users/simon/Downloads/collections/odysseus_collection/odysseus-dev"
+      echo "=== global pi sessions (did --session-dir get honored?) ==="; find
+      "C:/Users/si…)
+  ⎿  === global pi sessions (did --session-dir get honored?) ===
+     C:/Users/simon/.pi/agent/sessions/--C--Users-simon-AppData-Local-Temp-
+     pi-spike--/2026-06-08T11-25-01-764Z_019ea6fa-99c4-7d73-89e6-5d14b43ee4
+     … +12 lines (ctrl+o to expand)
+
+● Now I have the honest picture. Let me commit the one dangling improvement (the
+  cancel-path hardening I made after the Phase 2 commit) so it isn't lost, then
+  give you the status:
+
+● Bash(cd
+      "C:/Users/simon/Downloads/collections/odysseus_collection/odysseus-dev"
+      git -c user.name="odysseus-dev" -c user.email="odysseus@local" commit -q
+      -m "Phase 2…)
+  ⎿  warning: in the working copy of 'src/pi_backend.py', LF will be replac
+     ed by CRLF the next time Git touches it
+     warning: in the working copy of 'src/pi_backend.py', LF will be replac
+     … +10 lines (ctrl+o to expand)
+
+● Committed — working tree is now clean (4 commits). Here's the full status.
+
+  Project Status — Gain #1 (pi as Odysseus's long-horizon, memory-aware agent)
+
+  Goal: embed pi as an Odysseus session backend (mode="pi") so the agent runs
+  many turns (pi's compaction) and knows you (Odysseus memory). Scope:
+  admin-only, memory-only, local-model-first.
+
+  ✅ Done and verified
+
+  - Phase 0 — GO/NO-GO spike: PASSED. Validated against your real local model
+  gemma4:e4b via Ollama: native tool-calling through pi's RPC path, and recall
+  preserved across 8 compaction cycles in an 11-turn run. (The durable spike
+  transcripts at ~/.pi/agent/sessions/...pi-spike... from 06-08 corroborate
+  this.)
+  - Phase 1 — memory bridge: code complete, committed.
+    - POST /api/codex/memory/search (ranked recall, reuses Odysseus's own
+  scorer) + capabilities advertises it
+    - mint_api_token() helper (in-process scoped-token minting)
+    - integrations/pi/extension/odysseus-bridge.ts — load-tested in pi (provider
+  registers, imports resolve)
+  - Phase 2 — RPC backend + wiring: code complete, committed (+ hardening).
+    - src/pi_backend.py (event translation, Windows-safe subprocess,
+  cancel/cleanup)
+    - dispatch branch in chat_routes.py on mode=="pi"
+    - All edited modules import cleanly in the venv; first-run setup done (DB +
+  admin created)
+
+  ⚠️ The honest gap: end-to-end memory round-trip is UNCONFIRMED
+
+  The definitive cross-session test (record a fact in session A → recall in a
+  fresh session B) was launched, but:
+  - its stdout scorecard was cleared with the 24h temp purge, and
+  - the data/pi_sessions/sessionA|B dirs are empty — and since my code creates
+  those dirs before spawning pi, their existence only proves the function was
+  called, not that the pi runs succeeded. No pi session files were written
+  there, which suggests the e2e spawns may have errored.
+
+  So I cannot claim that test passed. It needs a re-run with output captured —
+  and likely a small debug pass on why those spawns persisted nothing.
+
+  🔧 Blockers to resume
+
+  - Ollama is down (stopped when the machine idled) — must restart it to re-run
+  any live test.
+  - The dev Odysseus server isn't running (not needed for the stub-based test,
+  but is for a true HTTP mode=pi test).
+
+  Next steps when you're ready
+
+  1. Restart Ollama, re-run C:/tmp/test_pi_e2e.py capturing output to a file
+  (not just temp).
+  2. If spawns still produce no session, capture pi's stderr in pi_backend to
+  diagnose (the --provider odysseus + --continue + bridge path is the prime
+  suspect).
+  3. Then the real HTTP test: start the dev server, send mode=pi to
+  /api/chat_stream.
+
+  One more thing: I notice a new .ignore/cc7_odysseus.txt in the tree that I
+  didn't create. Want me to read it — is it context you left for this session?
+  And shall I restart Ollama and re-run the validation now?
+
+✻ Cogitated for 18m 44s
+
+> should i restart ollama as: $ ollama run gemma4:e4b
+
+● Short answer: that works, but it's more than you need and a bit awkward.
+
+  ollama run gemma4:e4b does two things — starts the server and drops you into
+  an interactive >>> chat prompt that occupies your terminal. You'd type /bye to  leave the chat (the server keeps running). The only part I actually need is     the server (the API on :11434); the interactive chat is irrelevant for the
+  test. The one upside: it pre-warms the model, so the first test turn won't
+  cold-start.
+
+  What I actually need is just the server reachable at http://localhost:11434.
+  Two cleaner options:
+
+  - ollama serve in a terminal you leave open — starts only the API, no REPL.
+  - On Windows, launching the Ollama desktop app starts the server in the tray.
+
+  Why you (not me) should start it: when I started ollama serve as a background
+  process last time, it died when my session idled — that's exactly why it's
+  down now. A server you launch in your own terminal persists independently of
+  my session, so the re-run (and any future testing) stays stable.
+
+  So: run ollama serve (or ollama run gemma4:e4b then /bye if you want it
+  pre-warmed) and leave that window open. Tell me when it's up and I'll
+  immediately:
+  1. re-run C:/tmp/test_pi_e2e.py capturing output to a file this time, and
+  2. if the pi spawns still write no session, add stderr capture to diagnose why
+  (the --provider odysseus + --continue + bridge path is my prime suspect).
+
+  One quick confirm while you do that: want me to also read that new
+  .ignore/cc7_odysseus.txt — is it context you left for me?
+
+✻ Crunched for 41s
+
+──────────────────────────────────────────────────────────────────── odysseus ──> ok i just ran "ollama serve":
+  simon@Simon_laptop MINGW64 ~                                                    $ ollama serve                                                                  time=2026-06-09T05:42:26.381-07:00 level=INFO source=routes.go:1802             msg="server config" env="map[CUDA_VISIBLE_DEVICES: GGML_VK_VISIBLE_DEVICES:     GPU_DEVICE_ORDINAL: HIP_VISIBLE_DEVICES: HSA_OVERRIDE_GFX_VERSION:              HTTPS_PROXY: HTTP_PROXY: NO_PROXY: OLLAMA_CONTEXT_LENGTH:0 OLLAMA_DEBUG:INFO    OLLAMA_DEBUG_LOG_REQUESTS:false OLLAMA_EDITOR: OLLAMA_FLASH_ATTENTION:false     OLLAMA_GPU_OVERHEAD:0 OLLAMA_HOST:http://127.0.0.1:11434                        OLLAMA_KEEP_ALIVE:5m0s OLLAMA_KV_CACHE_TYPE: OLLAMA_LLM_LIBRARY:                OLLAMA_LOAD_TIMEOUT:5m0s OLLAMA_MAX_LOADED_MODELS:0 OLLAMA_MAX_QUEUE:512        OLLAMA_MAX_TRANSFER_STREAMS:4 OLLAMA_MODELS:C:\\Users\\simon\\.ollama\\models   OLLAMA_MULTIUSER_CACHE:false OLLAMA_NEW_ENGINE:false OLLAMA_NOHISTORY:false     OLLAMA_NOPRUNE:false OLLAMA_NO_CLOUD:false OLLAMA_NUM_PARALLEL:1                OLLAMA_ORIGINS:[http://localhost https://localhost http://localhost:*           https://localhost:* http://127.0.0.1 https://127.0.0.1 http://127.0.0.1:*       https://127.0.0.1:* http://0.0.0.0 https://0.0.0.0 http://0.0.0.0:*             https://0.0.0.0:* app://* file://* tauri://* vscode-webview://*                 vscode-file://*] OLLAMA_REMOTES:[ollama.com] OLLAMA_SCHED_SPREAD:false          OLLAMA_VULKAN:false ROCR_VISIBLE_DEVICES:]"                                     time=2026-06-09T05:42:26.382-07:00 level=INFO source=routes.go:1804             msg="Ollama cloud disabled: false"                                              time=2026-06-09T05:42:26.389-07:00 level=INFO source=images.go:517 msg="total   blobs: 4"
+  time=2026-06-09T05:42:26.391-07:00 level=INFO source=images.go:524 msg="total
+  unused blobs removed: 0"
+  time=2026-06-09T05:42:26.397-07:00 level=INFO source=routes.go:1864
+  msg="Listeni
+
+   ing on 127.0.0.1:11434 (version 0.24.0)"
+  time=2026-06-09T05:42:26.397-07:00 level=INFO source=runner.go:67
+  msg="discoveri
+
+   ing available GPUs..."
+  time=2026-06-09T05:42:26.400-07:00 level=WARN source=model_show_cache.go:591
+  msg
+
+   g="failed to open manifest config while checking model show cache
+  eligibility" er
+
+   rror="open
+  C:\\Users\\simon\\.ollama\\models\\blobs\\sha256-c5c5b6e73cf46a0ce6b6e
+
+   eccfa5fc42a5661eefbdb60b50c255e6ba684c6d51f2: The system cannot find the
+  file spe
+
+  ──── (41 lines hidden) ──────────────────────────────────────────────────────
+  251b37295b7637
+
+   727a59ca35cf5cfe5c7379bc3e2104b2ce3c145aa887: The system cannot find the
+  file spe
+
+   etime=2026-06-09T05:42:26.642-07:00 level=WARN
+  source=model_show_cache.go:591 msg="failed to open manifest config while
+  checking model show cache eligibility" error="open
+  C:\\Users\\simon\\.ollama\\models\\blobs\\sha256-de9fed2251b37295b763727a59ca
+  35cf5cfe5c7379bc3e2104b2ce3c145aa887: The system cannot find the file
+  specified."
+  time=2026-06-09T05:42:26.645-07:00 level=WARN source=model_show_cache.go:336
+  msg="failed to hydrate local model show cache"
+  model=registry.ollama.ai/library/qwen3.5:4b error="open
+  C:\\Users\\simon\\.ollama\\models\\blobs\\sha256-de9fed2251b37295b763727a59ca
+  35cf5cfe5c7379bc3e2104b2ce3c14
+
+ C:\\Users\\simon\\.ollama\\models\\blobs\\sha256-de9fed2251b37295b763727a59ca
+  35cf5cfe5c7379bc3e2104b2ce3c145aa887: The system cannot find the file
+  specified."
+  time=2026-06-09T05:42:26.840-07:00 level=INFO
+  source=model_recommendations.go:177 msg="model recommendations cache sleep
+  scheduled" wait=4h18m1.628565349s consecutive_failures=0
+  time=2026-06-09T05:42:27.310-07:00 level=INFO source=runner.go:106
+  msg="experimental Vulkan support disabled.  To enable, set OLLAMA_VULKAN=1"
+  time=2026-06-09T05:42:27.312-07:00 level=INFO source=server.go:433
+  msg="starting runner"
+  cmd="C:\\Users\\simon\\AppData\\Local\\Programs\\Ollama\\ollama.exe runner
+  --ollama-engine --port 55837"
+  time=2026-06-09T05:42:28.832-07:00 level=INFO source=server.go:433
+  msg="starting runner"
+  cmd="C:\\Users\\simon\\AppData\\Local\\Programs\\Ollama\\ollama.exe runner
+  --ollama-engine --port 55858"
+  time=2026-06-09T05:42:30.277-07:00 level=INFO source=server.go:433
+  msg="starting runner"
+  cmd="C:\\Users\\simon\\AppData\\Local\\Programs\\Ollama\\ollama.exe runner
+  --ollama-engine --port 55876"
+  time=2026-06-09T05:42:30.277-07:00 level=INFO source=server.go:433
+  msg="starting runner"
+  cmd="C:\\Users\\simon\\AppData\\Local\\Programs\\Ollama\\ollama.exe runner
+  --ollama-engine --port 55877"
+  time=2026-06-09T05:42:30.743-07:00 level=INFO source=types.go:42
+  msg="inference compute" id=GPU-7783a8fd-2d45-932c-e373-dcf1c52a45ce
+  filter_id="" library=CUDA compute=8.6 name=CUDA0 description="NVIDIA GeForce
+  RTX 3050 Laptop GPU" libdirs=ollama,cuda_v13 driver=13.1 pci_id=0000:01:00.0
+  type=discrete total="4.0 GiB" available="3.7 GiB"
+  time=2026-06-09T05:42:30.744-07:00 level=INFO source=routes.go:1914
+  msg="vram-based default context" total_vram="4.0 GiB" default_num_ctx=4096
+
+● Server's up and listening on 127.0.0.1:11434. (Those warnings are about other
+  cached models with missing blobs — my_merged_model, mistral:7b, etc. — not
+  gemma4:e4b; harmless. Note your RTX 3050 has only 4 GiB VRAM, so the 9.6 GB
+  model runs partly on CPU → slower inference, but fine.)
+
+  Let me confirm the API answers, then re-run the cross-session test capturing
+  output to a durable file this time:
+
+● Bash(echo "=== API live? ==="; curl -s --max-time 5
+      http://localhost:11434/api/version 2>&1; echo
+      echo "=== launching e2e test (output -> C:/tmp/pi_e2e_result.txt) =…)
+  ⎿  Running in the background (↓ to manage)
+
+● Re-running now (output captured to C:/tmp/pi_e2e_result.txt so it survives
+  this time, and I cleared the stale session dirs so I can see whether pi writes
+  sessions on this run). With the model partly on CPU it'll take a few minutes
+  per turn. I'll report the scorecard — and if the pi spawns still produce        nothing, I'll add stderr capture to diagnose — as soon as it finishes.
+
+✻ Churned for 29s · 1 shell still running
+
+──────────────────────────────────────────────────────────────────── odysseus ──> show me the scorecard when it's done
+────────────────────────────────────────────────────────────────────────────────  | Opus 4.8 | odysseus-dev | main | ctx 40% | 5h 3% | 7d 42% |
+  ⏵⏵ bypass permissions on · 1 shell · ← for agents
+                                                         Remote Control active
+
+
+ Re-running now (output captured to C:/tmp/pi_e2e_result.txt so it survives
+  this time, and I cleared the stale session dirs so I can see whether pi writes
+  sessions on this run). With the model partly on CPU it'll take a few minutes
+  per turn. I'll report the scorecard — and if the pi spawns still produce
+  nothing, I'll add stderr capture to diagnose — as soon as it finishes.
+
+✻ Churned for 29s · 1 shell still running
+
+> show me the scorecard when it's done
+
+● I'll show you the scorecard as soon as the run finishes. Waiting on the
+  background test to complete.
+
+✻ Cooked for 5s · 1 shell still running
+
+> where is the pi codebase that you are using
+
+● Bash(echo "=== pi binary on PATH ==="; which pi pi.cmd 2>&1 | head
+      echo "=== where npm installed it (global root) ==="; npm root -g 2>&1…)
+  ⎿  === pi binary on PATH ===
+     which: no pi.cmd in (/c/Users/simon/.grok/bin:/c/Users/simon/go/bin:/c          /Users/simon/.opencode/bin:/c/Users/simon/bin:/mingw64/bin:/usr/local/
+     … +63 lines (ctrl+o to expand)                                             
+● There are two pi locations, and they serve different roles:
+
+  1. The pi that actually runs (the binary the backend spawns)
+
+  C:\Users\simon\AppData\Roaming\npm\node_modules\@earendil-works\pi-coding-agen  t — version 0.78.1, installed from npm with npm i -g
+  @earendil-works/pi-coding-agent.
+
+  - The PATH shim is C:\Users\simon\AppData\Roaming\npm\pi (and pi.cmd),
+  reachable because …/AppData/Roaming/npm is on PATH.
+  - This is what src/pi_backend.py invokes (pi.cmd on Windows) when Odysseus
+  spawns pi --mode rpc. This is the production code path.
+
+  2. The pi source tree I read from (reference only — does not run)
+
+  C:\Users\simon\Downloads\collections\pi_collection\pi_architecture_hugginface\
+  pi-main — the full monorepo you pointed me at originally.
+
+  - I used this only to read docs and verify the API against actual source
+  (docs/rpc.md, the examples/extensions/*.ts, src/cli/args.ts, src/core/sdk.ts,
+  etc.) while writing the bridge extension and backend.
+  - Nothing executes from here. It's the spec I checked my code against.
+
+  ★ Insight ─────────────────────────────────────
+  This split is deliberate and matters for correctness: I grounded the
+  integration against the source tree (so every claim about RPC commands,
+  --tools filtering, and the extension API was verified in real code, not docs
+  alone), but I run the published npm release. The two are the same version line
+  (the source is pre-release of 0.78.x; the npm install is exactly 0.78.1), so
+  what I verified matches what executes. If they ever diverge, the npm 0.78.1 is
+  the source of truth for runtime behavior.
+  ─────────────────────────────────────────────────
+
+  The bridge extension I wrote lives in your repo, not either pi location:
+  integrations/pi/extension/odysseus-bridge.ts — pi loads it at spawn via -e
+  <path>.
+
+  The e2e test is still running in the background; I'll post the scorecard the
+  moment it lands.
+
+✻ Crunched for 55s · 1 shell still running
+
+※ recap: Goal: embed pi as Odysseus's long-horizon, memory-aware agent (Gain      #1). Phases 0–2 are coded and committed; I'm waiting on the cross-session
+  memory test now running against pi + Ollama. Next: show you the scorecard when  it finishes. (disable recaps in /config)
+
+──────────────────────────────────────────────────────────────────── odysseus ──
+> 
+────────────────────────────────────────────────────────────────────────────────
+  | Opus 4.8 | odysseus-dev | main | ctx 40% | 5h 6% | 7d 42% |
+  ⏵⏵ bypass permissions on · 1 shell · ← for agents
+                                                         Remote Control active
+
+
+● Server's up and listening on 127.0.0.1:11434. (Those warnings are about other
+  cached models with missing blobs — my_merged_model, mistral:7b, etc. — not
+  gemma4:e4b; harmless. Note your RTX 3050 has only 4 GiB VRAM, so the 9.6 GB
+  model runs partly on CPU → slower inference, but fine.)
+
+  Let me confirm the API answers, then re-run the cross-session test capturing
+  output to a durable file this time:
+
+● Bash(echo "=== API live? ==="; curl -s --max-time 5
+      http://localhost:11434/api/version 2>&1; echo
+      echo "=== launching e2e test (output -> C:/tmp/pi_e2e_result.txt) =…)
+  ⎿  Running in the background (↓ to manage)
+
+● Re-running now (output captured to C:/tmp/pi_e2e_result.txt so it survives
+  this time, and I cleared the stale session dirs so I can see whether pi writes
+  sessions on this run). With the model partly on CPU it'll take a few minutes
+  per turn. I'll report the scorecard — and if the pi spawns still produce        nothing, I'll add stderr capture to diagnose — as soon as it finishes.
+
+✻ Churned for 29s · 1 shell still running
+
+> show me the scorecard when it's done                                          
+✶ Building RPC backend and wiring…
+
+────────────────────────────────────────────────────────────────────────────────  Shell details
+
+  Status:   running
+  Runtime:  1m 20s
+  Command:  echo "=== API live? ==="; curl -s --max-time 5
+  Status:   running
+  Runtime:  1m 20s
+  Command:  echo "=== API live? ==="; curl -s --max-time 5
+  ⎿  Running in the background (↓ to manage)
+
+● Re-running now (output captured to C:/tmp/pi_e2e_result.txt so it survives
+  this time, and I cleared the stale session dirs so I can see whether pi writes
+  sessions on this run). With the model partly on CPU it'll take a few minutes
+  per turn. I'll report the scorecard — and if the pi spawns still produce
+  nothing, I'll add stderr capture to diagnose — as soon as it finishes.
+
+✻ Churned for 29s · 1 shell still running
+
+> show me the scorecard when it's done
+
+● I'll show you the scorecard as soon as the run finishes. Waiting on the
+  background test to complete.
+
+✻ Cooked for 5s · 1 shell still running
+
+> where is the pi codebase that you are using
+
+● Bash(echo "=== pi binary on PATH ==="; which pi pi.cmd 2>&1 | head
+      echo "=== where npm installed it (global root) ==="; npm root -g 2>&1…)
+  ⎿  === pi binary on PATH ===
+     which: no pi.cmd in (/c/Users/simon/.grok/bin:/c/Users/simon/go/bin:/c          /Users/simon/.opencode/bin:/c/Users/simon/bin:/mingw64/bin:/usr/local/
+     … +63 lines (ctrl+o to expand)                                             
+● There are two pi locations, and they serve different roles:
+
+  1. The pi that actually runs (the binary the backend spawns)
+
+  C:\Users\simon\AppData\Roaming\npm\node_modules\@earendil-works\pi-coding-agen  t — version 0.78.1, installed from npm with npm i -g
+  @earendil-works/pi-coding-agent.
+
+  - The PATH shim is C:\Users\simon\AppData\Roaming\npm\pi (and pi.cmd),
+  reachable because …/AppData/Roaming/npm is on PATH.
+  - This is what src/pi_backend.py invokes (pi.cmd on Windows) when Odysseus
+  spawns pi --mode rpc. This is the production code path.
+
+  2. The pi source tree I read from (reference only — does not run)
+
+  C:\Users\simon\Downloads\collections\pi_collection\pi_architecture_hugginface\
+  pi-main — the full monorepo you pointed me at originally.
+
+  - I used this only to read docs and verify the API against actual source
+  (docs/rpc.md, the examples/extensions/*.ts, src/cli/args.ts, src/core/sdk.ts,
+  etc.) while writing the bridge extension and backend.
+  - Nothing executes from here. It's the spec I checked my code against.
+
+  ★ Insight ─────────────────────────────────────
+  This split is deliberate and matters for correctness: I grounded the
+  integration against the source tree (so every claim about RPC commands,
+  --tools filtering, and the extension API was verified in real code, not docs
+  alone), but I run the published npm release. The two are the same version line
+  (the source is pre-release of 0.78.x; the npm install is exactly 0.78.1), so
+  what I verified matches what executes. If they ever diverge, the npm 0.78.1 is
+  the source of truth for runtime behavior.
+  ─────────────────────────────────────────────────
+
+  The bridge extension I wrote lives in your repo, not either pi location:
+  integrations/pi/extension/odysseus-bridge.ts — pi loads it at spawn via -e
+  <path>.
+
+  The e2e test is still running in the background; I'll post the scorecard the
+  moment it lands.
+
+✻ Crunched for 55s · 1 shell still running
+
+※ recap: Goal: embed pi as Odysseus's long-horizon, memory-aware agent (Gain      #1). Phases 0–2 are coded and committed; I'm waiting on the cross-session
+  memory test now running against pi + Ollama. Next: show you the scorecard when  it finishes. (disable recaps in /config)
+
+> how is the e2e run ? why is it taking so long
+
+● Let me check the live progress of the run and what the model's actually doing:
+
+● Bash(echo "=== test output so far ==="; cat C:/tmp/pi_e2e_result.txt
+      2>/dev/null || echo "(file empty/not created yet)"
+      echo…)
+  ⎿  === test output so far ===
+
+     === is gemma4:e4b loaded / how is it split CPU vs GPU? ===
+     … +21 lines (ctrl+o to expand)
+
+● Something's wrong — this isn't slow, it's hung. The tells: the output file is
+  still empty (turn 1 never returned), ollama ps shows no model loaded (so pi
+  isn't actually driving inference), sessionA is empty again (pi wrote no         session), and there are 7+ lingering node.exe — detached pi processes that
+  never got reaped. Let me read the launch log and look directly at what pi is
+  doing:
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+● Confirmed hung: API was live, test launched, but pi wrote no session anywhere
+  and produced no output. Let me stop the hung run and kill the stray pi
+  processes (surgically — matching only pi/rpc command lines, not your other      node apps like Cursor), then diagnose directly:
+
+● PowerShell(Write-Output "=== pi / rpc / test processes (command-line match)
+            ==="
+            $targets = Get-CimInstance Win32_Process | Where-Object {…)
+  ⎿  Error: Exit code 255
+     === pi / rpc / test processes (command-line match) ===
+
+     ProcessId Name           cmd
+
+     --------- ----           ---
+
+         33332 bash.exe       "C:\Program Files\Git\bin\bash.exe" -c -l "export
+     T...
+         48472 bash.exe       "C:\Program Files\Git\bin\..\usr\bin\bash.exe" -c
+     -...
+         38400 bash.exe       "C:\Program Files\Git\bin\..\usr\bin\bash.exe" -c
+     -...
+          6828 python.exe
+     C:\Users\simon\Downloads\collections\odysseus_colle...
+         42992 python.exe
+     C:\Users\simon\Downloads\collections\odysseus_colle...
+
+     … +13 lines (ctrl+o to expand)
+
+● Background command "Verify API and run e2e test capturing output" failed with
+exit code 255
+
+● Killed cleanly — there was actually only one hung pi process (pi.cmd --mode
+  rpc, PID 33572 + its node child); the other node.exe were your unrelated apps.  The model never loaded, which means pi started but never got to an LLM call.
+
+  My leading hypothesis: the bridge's before_agent_start handler calls fetch()
+  to the memory API with no timeout — if that fetch hangs, the turn blocks
+  forever before any model call (exactly matching "no model loaded, no output,
+  pi alive"). Let me confirm by running pi with our exact flags but pointing
+  ODYSSEUS_URL at a closed port (fetch fails fast instead of hanging) and
+  watching stderr directly:
+
+● Write(C:\tmp\diag_pi.py)
+  ⎿  Wrote 53 lines to ..\..\..\..\..\..\tmp\diag_pi.py
+         stdout+stderr, spawn pi with our exact backend flags, print ALL
+       2 to find why the turn hangs (no model load, no events)."""
+       3 import subprocess, threading, json, time, os
+       4
+       5 BRIDGE = r"C:\Users\simon\Downloads\collections\odysseus_collect
+       6 SDIR = r"C:\tmp\pi-diag-session"\extension\odysseus-bridge.ts"
+       7 os.makedirs(SDIR, exist_ok=True)
+       8
+       9 env = dict(os.environ)
+      10 env.update({
+     … +51 lines (ctrl+o to expand)
+  ⎿  Found 4 new diagnostic issues in 1 file (ctrl+o to expand)
+
+● Bash(cd
+      "C:/Users/simon/Downloads/collections/odysseus_collection/odysseus-dev" &&      timeout 90 ./venv/Scripts/python.exe C:/tmp/diag_pi.py 2>&1 | head -60)
+  ⎿  SPAWN: pi.cmd --mode rpc --session-dir C:\tmp\pi-diag-session --provid
+     er odysseus --model gemma4:e4b --system-prompt You are a helpful assis
+     tant. --tools manage_memory -e C:\Users\simon\Downloads\collections\od
+     … +9 lines (ctrl+o to expand)
+  ⎿  (timeout 1m 50s)
+
+● Found the root cause. Error: Unknown provider "odysseus" — pi validates
+  --provider odysseus at startup before the extension's registerProvider runs in  the rpc/session path (even though --list-models loads extensions first, which   is why it appeared there). So the turn dies immediately; the model never
+  loads. My hypothesis about the fetch was wrong — it never even got that far.
+
+  The fix is to use the proven Phase 0 mechanism: define the model in a
+  models.json (which --provider ollama --model gemma4:e4b resolved cleanly in
+  the spike), and let the extension handle only memory. Let me check how to
+  point pi at a per-session models file so I don't have to mutate the global
+  one:
+
+● Bash(cd "C:/Users/simon/Downloads/collections/pi_collection/pi_architecture_hu
+      gginface/pi-main/packages/coding-agent"
+      echo "=== models-file flag / env in args + docs…)
+  ⎿  === models-file flag / env in args + docs ===
+     src/cli/args.ts:30:        models?: string[];
+     src/cli/args.ts:46:        listModels?: string | true;
+     … +19 lines (ctrl+o to expand)
+  ⎿  Shell cwd was reset to
+     C:\Users\simon\Downloads\collections\odysseus_collection\odysseus-dev
+
+● --models is just cycling patterns, not a file path. Let me check where pi
+  discovers models.json (global vs project-level), since I need a per-session
+  way to define the provider:
+
+● Bash(cd "C:/Users/simon/Downloads/collections/pi_collection/pi_architecture_hu
+      gginface/pi-main/packages/coding-agent"
+      echo "=== models.json location(s) in docs ===";…)
+  ⎿  === models.json location(s) in docs ===
+     3:Add custom providers and models (Ollama, vLLM, LM Studio, proxies) v
+     ia `~/.pi/agent/models.json`.
+     … +14 lines (ctrl+o to expand)
+  ⎿  Shell cwd was reset to
+     C:\Users\simon\Downloads\collections\odysseus_collection\odysseus-dev
+
+● models.json lives at getAgentDir()/models.json. If I can override the agent
+  dir per-spawn, I get per-session model config with no global mutation. Let me
+  check how getAgentDir() resolves (env/flag override?):
+
+● Bash(cd "C:/Users/simon/Downloads/collections/pi_collection/pi_architecture_hu
+      gginface/pi-main/packages/coding-agent"
+      echo "=== getAgentDir definition ==="; grep -n…)
+  ⎿  === getAgentDir definition ===
+     491:export function getAgentDir(): string {
+     492-       const envDir = process.env[ENV_AGENT_DIR];
+     … +22 lines (ctrl+o to expand)
+  ⎿  Shell cwd was reset to
+     C:\Users\simon\Downloads\collections\odysseus_collection\odysseus-dev
+
+● getAgentDir() is overridable via an env var (ENV_AGENT_DIR). Let me get its
+  exact name:
+
+● Bash(cd "C:/Users/simon/Downloads/collections/pi_collection/pi_architecture_hu
+      gginface/pi-main/packages/coding-agent"
+      grep -rn "ENV_AGENT_DIR\s*=" src/ 2>/dev/null |…)
+  ⎿  src/config.ts:471:export const ENV_AGENT_DIR = `${APP_NAME.toUpperCase
+     ()}_CODING_AGENT_DIR`;
+     471:export const ENV_AGENT_DIR = `${APP_NAME.toUpperCase()}_CODING_AGE
+     NT_DIR`;
+  ⎿  Shell cwd was reset to
+     C:\Users\simon\Downloads\collections\odysseus_collection\odysseus-dev
+
+● The fix is clear. getAgentDir() is overridable via env PI_CODING_AGENT_DIR,
+  and pi reads models.json from there. So instead of relying on the extension to  register the provider (which loads too late for --provider in rpc mode), I'll
+  give each session its own agent dir with a models.json defining the local
+  model — the exact mechanism Phase 0 proved works — and demote the extension to
+  memory-only.
+
+  Let me validate this mechanism cheaply before rewriting (per-session agent dir
+  + models.json + --provider, no bridge yet):
+
+● Bash(cd
+      "C:/Users/simon/Downloads/collections/odysseus_collection/odysseus-dev"
+      AD="C:/tmp/pi-agentdir-test"; rm -rf "$AD"; mkdir -p "$AD"…)
+  ⎿  === does --provider odysseuslocal resolve now? ===
+     odysseuslocal  gemma4:e4b             8.2K     256      yes       no
+     … +26 lines (ctrl+o to expand)
+  ⎿  (timeout 2m 40s)
+
+● Mechanism confirmed. With a per-session agent dir + models.json, --provider
+  odysseuslocal resolves in rpc mode and the turn completes cleanly: agent_start  → assistant "Hello" → agent_end. Model loaded and responded.
+
+  Now I'll apply the fix to the real code. Let me read the current spawn section  of pi_backend.py:
+
+  Read 1 file (ctrl+o to expand)
+
+● Now I'll rewrite pi_backend to use the proven per-session-agent-dir +
+  models.json mechanism. First, the helpers (add provider constant, agent-dir,
+  models.json writer):
+
+● Update(src\pi_backend.py)
+  ⎿  Added 37 lines, removed 1 line
+       55  )
+       56
+       57
+       58 +# Provider name we register in the per-session models.json and
+          + select with
+       59 +# --provider. Defining the model in models.json (rather than v
+          +ia the extension's
+       60 +# registerProvider) is essential: pi resolves --provider at st
+          +artup, BEFORE
+       61 +# extension factories run, so an extension-registered provider
+          + is "Unknown" in
+       62 +# rpc mode. models.json is read at startup from $PI_CODING_AGE
+          +NT_DIR.
+       63 +_PROVIDER = "odysseuslocal"
+       64 +
+       65 +
+       66  def _pi_executable() -> str:
+       67      """pi's bin name. On Windows npm installs a ``pi.cmd`` shi
+           m on PATH."""
+       68      return "pi.cmd" if os.name == "nt" else "pi"
+       69
+       70
+       63 -def _session_dir_for(session_id: str) -> Path:
+       71 +def _agent_dir_for(session_id: str) -> Path:
+       72 +    """Per-session pi config home ($PI_CODING_AGENT_DIR): hold
+          +s models.json and
+       73 +    this session's sessions/ subtree. Isolating it per Odysseu
+          +s session avoids
+       74 +    mutating the user's global ~/.pi/agent and keeps sessions
+          +separate."""
+       75      safe = "".join(c for c in session_id if c.isalnum() or c i
+           n "-_") or "default"
+       76      return _PI_SESSIONS_DIR / safe
+       77
+       78
+       79 +def _write_models_json(agent_dir: Path, model_id: str, base_ur
+          +l: str,
+       80 +                       context_window: int, max_tokens: int, r
+          +easoning: bool = True) -> None:
+       81 +    """Write the per-session models.json so --provider/--model
+          + resolve at startup."""
+       82 +    models = {
+       83 +        "providers": {
+       84 +            _PROVIDER: {
+       85 +                "baseUrl": base_url,
+       86 +                "api": "openai-completions",
+       87 +                "apiKey": "local",  # local OpenAI-compatible
+          +servers ignore this
+       88 +                "compat": {"supportsDeveloperRole": False, "su
+          +pportsReasoningEffort": False},
+       89 +                "models": [{
+       90 +                    "id": model_id,
+       91 +                    "name": model_id,
+       92 +                    "reasoning": reasoning,
+       93 +                    "input": ["text"],
+       94 +                    "cost": {"input": 0, "output": 0, "cacheRe
+          +ad": 0, "cacheWrite": 0},
+       95 +                    "contextWindow": context_window,
+       96 +                    "maxTokens": max_tokens,
+       97 +                }],
+       98 +            }
+       99 +        }
+      100 +    }
+      101 +    (agent_dir / "models.json").write_text(json.dumps(models,
+          +indent=2), encoding="utf-8")
+      102 +
+      103 +
+      104  def _has_existing_session(session_dir: Path) -> bool:
+      105      try:
+      106          return session_dir.is_dir() and any(session_dir.glob("
+           **/*.jsonl"))
+  ⎿  Found 3 new diagnostic issues in 1 file (ctrl+o to expand)
+
+● Now the spawn setup block — wire in the agent dir, models.json, and corrected
+  flags/env:
+
+● Update(src\pi_backend.py)
+  ⎿  Added 5 lines, removed 6 lines
+      140          yield "data: [DONE]\n\n"
+      141          return
+      142
+      143 -    session_dir = _session_dir_for(session_id)
+      143 +    agent_dir = _agent_dir_for(session_id)
+      144 +    session_dir = agent_dir / "sessions"
+      145      session_dir.mkdir(parents=True, exist_ok=True)
+      146 +    _write_models_json(agent_dir, model_id, model_base_url, co
+          +ntext_window, max_tokens)
+      147
+      148      argv = [
+      149          _pi_executable(),
+      150          "--mode", "rpc",
+      151          "--session-dir", str(session_dir),
+      150 -        "--provider", "odysseus",
+      152 +        "--provider", _PROVIDER,
+      153          "--model", model_id,
+      154          "--system-prompt", system_prompt or _DEFAULT_PERSONA,
+      155          "--tools", allowed_tools,
+     ...
+      161
+      162      env = dict(os.environ)
+      163      env.update({
+      164 +        "PI_CODING_AGENT_DIR": str(agent_dir),  # so pi reads
+          +our per-session models.json
+      165          "ODYSSEUS_URL": odysseus_url,
+      166          "ODYSSEUS_API_TOKEN": api_token,
+      164 -        "ODYSSEUS_MODEL_BASE_URL": model_base_url,
+      165 -        "ODYSSEUS_MODEL_ID": model_id,
+      166 -        "ODYSSEUS_MODEL_CONTEXT": str(context_window),
+      167 -        "ODYSSEUS_MODEL_MAXTOKENS": str(max_tokens),
+      167      })
+      168
+      169      try:
+
+● Now update the bridge: drop registerProvider + the MODEL_* env (models.json
+  owns the provider now), and add a fetch timeout so memory calls can never hang  a turn. Let me view the current bridge head:
+
+  Read 1 file (ctrl+o to expand)
+
+● Update(integrations\pi\extension\odysseus-bridge.ts)
+  ⎿  Added 19 lines, removed 13 lines
+      32
+      33  const URL_BASE = (process.env.ODYSSEUS_URL ?? "").replace(/\/+$
+          /, "");
+      34  const TOKEN = process.env.ODYSSEUS_API_TOKEN ?? "";
+      35 -const MODEL_BASE = process.env.ODYSSEUS_MODEL_BASE_URL ?? "";
+      36 -const MODEL_ID = process.env.ODYSSEUS_MODEL_ID ?? "";
+      35  const INJECT_K = Number(process.env.ODYSSEUS_MEMORY_INJECT_K ??
+           "6") || 6;
+      38 -const MODEL_CTX = Number(process.env.ODYSSEUS_MODEL_CONTEXT ??
+         -"32768") || 32768;
+      39 -const MODEL_MAXTOK = Number(process.env.ODYSSEUS_MODEL_MAXTOKEN
+         -S ?? "4096") || 4096;
+      40 -const MODEL_REASONING = (process.env.ODYSSEUS_MODEL_REASONING ?
+         -? "true") !== "false";
+      36 +// Hard cap on any single memory call so a slow/hung Odysseus c
+         +an never block a
+      37 +// turn (before_agent_start runs every turn; a hang there stall
+         +s the whole agent).
+      38 +const FETCH_TIMEOUT_MS = Number(process.env.ODYSSEUS_FETCH_TIME
+         +OUT_MS ?? "8000") || 8000;
+      39
+      40  interface Memory {
+      41    text?: string;
+     ...
+      48    if (!URL_BASE || !TOKEN) {
+      49      throw new Error("Odysseus bridge not configured (ODYSSEUS_U
+          RL / ODYSSEUS_API_TOKEN missing)");
+      50    }
+      53 -  const res = await fetch(`${URL_BASE}${path}`, {
+      54 -    ...init,
+      55 -    headers: {
+      56 -      Authorization: `Bearer ${TOKEN}`,
+      57 -      "Content-Type": "application/json",
+      58 -      ...(init?.headers ?? {}),
+      59 -    },
+      60 -  });
+      51 +  const ctrl = new AbortController();
+      52 +  const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS
+         +);
+      53 +  let res: Response;
+      54 +  try {
+      55 +    res = await fetch(`${URL_BASE}${path}`, {
+      56 +      ...init,
+      57 +      signal: ctrl.signal,
+      58 +      headers: {
+      59 +        Authorization: `Bearer ${TOKEN}`,
+      60 +        "Content-Type": "application/json",
+      61 +        ...(init?.headers ?? {}),
+      62 +      },
+      63 +    });
+      64 +  } finally {
+      65 +    clearTimeout(timer);
+      66 +  }
+      67    const body = await res.text();
+      68    if (!res.ok) {
+      69      // Surface the server's verdict verbatim (e.g. 403 scope de
+          nial) — the
+
+● Now remove the registerProvider block from the extension (models.json owns the
+  provider now):
+
+  Read 1 file (ctrl+o to expand)
+
+● Update(integrations\pi\extension\odysseus-bridge.ts)
+  ⎿  Added 7 lines, removed 23 lines
+       95    ),
+       96  });
+       97
+       98 -export default async function odysseusBridge(pi: ExtensionAPI)
+          - {
+       99 -  // 1. Register the local model as a provider (only if Odysse
+          -us supplied one;
+      100 -  //    otherwise rely on whatever the user configured in mode
+          -ls.json).
+      101 -  if (MODEL_BASE && MODEL_ID) {
+      102 -    pi.registerProvider("odysseus", {
+      103 -      name: "Odysseus (local)",
+      104 -      baseUrl: MODEL_BASE,
+      105 -      apiKey: "ollama", // local OpenAI-compatible servers ign
+          -ore the key
+      106 -      api: "openai-completions",
+      107 -      models: [
+      108 -        {
+      109 -          id: MODEL_ID,
+      110 -          name: `${MODEL_ID} (Odysseus)`,
+      111 -          reasoning: MODEL_REASONING,
+      112 -          input: ["text"],
+      113 -          cost: { input: 0, output: 0, cacheRead: 0, cacheWrit
+          -e: 0 },
+      114 -          contextWindow: MODEL_CTX,
+      115 -          maxTokens: MODEL_MAXTOK,
+      116 -        },
+      117 -      ],
+      118 -    });
+      119 -  }
+       98 +export default function odysseusBridge(pi: ExtensionAPI) {
+       99 +  // NOTE: the model PROVIDER is defined in the per-session mo
+          +dels.json that
+      100 +  // Odysseus writes (read via $PI_CODING_AGENT_DIR), NOT here
+          +. pi resolves
+      101 +  // --provider at startup before extension factories run, so
+          +registering the
+      102 +  // provider from an extension yields "Unknown provider" in r
+          +pc mode. This
+      103 +  // extension owns memory only.
+      104
+      121 -  // 2. The memory tool — search + add, backed by the scoped A
+          -PI.
+      105 +  // 1. The memory tool — search + add, backed by the scoped A
+          +PI.
+      106    pi.registerTool({
+      107      name: "manage_memory",
+      108      label: "Memory",
+
+● Let me check for any stale MODEL_* references and fix the comment numbering,
+  then syntax-check pi_backend:
+
+● Bash(cd
+      "C:/Users/simon/Downloads/collections/odysseus_collection/odysseus-dev"
+      echo "=== stale MODEL_/registerProvider refs in bridge? ==="; grep -n -E        "MODEL_BASE|…)
+  ⎿  === stale MODEL_/registerProvider refs in bridge? ===
+     23: *   ODYSSEUS_MODEL_BASE_URL   OpenAI-compatible base, e.g. http://
+     127.0.0.1:11434/v1
+     … +8 lines (ctrl+o to expand)
+
+● Only the doc-comment header references MODEL_* now (harmless, but let me make
+  it accurate) and renumber // 3. → // 2.:
+
+  Read 1 file (ctrl+o to expand)
+
+● Update(integrations\pi\extension\odysseus-bridge.ts)
+  ⎿  Added 6 lines, removed 3 lines
+      20   *
+      21   *   ODYSSEUS_URL              e.g. http://127.0.0.1:7000   (re
+          quired for memory)
+      22   *   ODYSSEUS_API_TOKEN        scoped `ody_` token (memory:read
+          , memory:write)
+      23 - *   ODYSSEUS_MODEL_BASE_URL   OpenAI-compatible base, e.g. htt
+         -p://127.0.0.1:11434/v1
+      24 - *   ODYSSEUS_MODEL_ID         model id to register + select, e
+         -.g. gemma4:e4b
+      23   *   ODYSSEUS_MEMORY_INJECT_K  optional; how many memories to a
+          uto-inject (default 6)
+      24 + *   ODYSSEUS_FETCH_TIMEOUT_MS optional; per memory-call timeou
+         +t (default 8000)
+      25   *
+      27 - * Loaded with:  pi --mode rpc -e <this file> --provider odysse
+         -us --model <id> ...
+      26 + * The model provider is NOT configured here — Odysseus writes
+         +a per-session
+      27 + * models.json (read via $PI_CODING_AGENT_DIR) and selects it w
+         +ith --provider,
+      28 + * because pi resolves --provider before extension factories ru
+         +n.
+      29 + *
+      30 + * Loaded with:  pi --mode rpc -e <this file> --provider <model
+         +s.json provider> ...
+      31   */
+      32
+      33  import type { BuildSystemPromptOptions, ExtensionAPI } from "@e
+          arendil-works/pi-coding-agent";
+      154      },
+      155    });
+      156
+      157 -  // 3. Passive recall — inject the memories most relevant to
+          -this turn's
+      157 +  // 2. Passive recall — inject the memories most relevant to
+          +this turn's
+      158    //    prompt into the system prompt, so the agent "knows the
+            user" without
+      159    //    having to explicitly search every time.
+      160    pi.on("before_agent_start", async (event) => {
+
+● Now re-run the cross-session test with the fix. Cleaning stale dirs and
+  capturing output durably:
+
+● Bash(cd
+      "C:/Users/simon/Downloads/collections/odysseus_collection/odysseus-dev"
+      rm -rf data/pi_sessions/sessionA data/pi_sessions/sessionB…)
+  ⎿  Running in the background (↓ to manage)
+
+● Here's where things stand — I found and fixed the bug, and the corrected run
+  is going now.
+
+  What was wrong (why it "took so long" = it was hung)
+
+  The run wasn't slow, it was deadlocked. Diagnosis via a direct pi spawn
+  surfaced the actual error:
+
+  Error: Unknown provider "odysseus"
+
+  My bridge extension registered the model provider via
+  pi.registerProvider("odysseus", …), but pi resolves --provider at startup,
+  before extension factories run in rpc mode — so the provider didn't exist yet,
+  pi errored immediately, the model never loaded, and my backend sat forever
+  waiting for events that never came (hence the empty session dirs and lingering
+  process). (--list-models had shown it because that path loads extensions
+  first — a misleading green light.)
+
+  The fix (applied)
+
+  Switched to the mechanism Phase 0 actually proved works: a per-session
+  models.json that pi reads at startup via $PI_CODING_AGENT_DIR, with --provider
+  selecting it. I verified this end-to-end before changing the real code — a
+  bare rpc turn returned agent_start → "Hello" → agent_end cleanly.
+
+  Concretely:
+  - pi_backend.py now writes a per-session models.json + sets
+  PI_CODING_AGENT_DIR, and selects --provider odysseuslocal.
+  - The bridge extension is memory-only now (dropped registerProvider), and I
+  added an 8s fetch timeout so a slow Odysseus can never hang a turn (the
+  original failure mode would've recurred there otherwise).
+
+  Now running
+
+  The cross-session memory test is re-running (two real turns on gemma4:e4b,
+  partly on CPU, so a few minutes). I'll show you the scorecard the moment it
+  lands — and these are uncommitted fixes, so once it passes I'll commit them as
+  the Phase 2 fix.
+
+✻ Cooked for 13m 10s · 1 shell still running
+
+────────────────────────────────────────────────────────────────────────────────  Shell details
+                                                                                  Status:   running
+  Runtime:  4m 36s
+  Command:  cd "C:/Users/simon/Downloads/collections/odysseus_collection/ody
+
+  Concretely:
+  - pi_backend.py now writes a per-session models.json + sets
+  PI_CODING_AGENT_DIR, and selects --provider odysseuslocal.
+  - The bridge extension is memory-only now (dropped registerProvider), and I
+  added an 8s fetch timeout so a slow Odysseus can never hang a turn (the
+  original failure mode would've recurred there otherwise).
+
+  Now running
+
+  The cross-session memory test is re-running (two real turns on gemma4:e4b,
+  partly on CPU, so a few minutes). I'll show you the scorecard the moment it
+  lands — and these are uncommitted fixes, so once it passes I'll commit them as
+  the Phase 2 fix.
+
+✻ Cooked for 13m 10s · 1 shell still running
+
+※ recap: Goal: embed pi as Odysseus's long-horizon, memory-aware agent (Gain      #1). I fixed the provider-loading bug that was hanging the agent and re-ran     the cross-session memory test. Next: read the test scorecard once it finishes,
+  then commit the fix if it passes. (disable recaps in /config)
+
+──────────────────────────────────────────────────────────────────── odysseus ──
+> 
+────────────────────────────────────────────────────────────────────────────────
+  | Opus 4.8 | odysseus-dev | main | ctx 44% | 5h 11% | 7d 43% |
+  ⏵⏵ bypass permissions on · 1 shell · ← for agents
+                                                         Remote Control active
+
+
+
+
+
+
+
+
+
+

@@ -20,11 +20,14 @@
  *
  *   ODYSSEUS_URL              e.g. http://127.0.0.1:7000   (required for memory)
  *   ODYSSEUS_API_TOKEN        scoped `ody_` token (memory:read, memory:write)
- *   ODYSSEUS_MODEL_BASE_URL   OpenAI-compatible base, e.g. http://127.0.0.1:11434/v1
- *   ODYSSEUS_MODEL_ID         model id to register + select, e.g. gemma4:e4b
  *   ODYSSEUS_MEMORY_INJECT_K  optional; how many memories to auto-inject (default 6)
+ *   ODYSSEUS_FETCH_TIMEOUT_MS optional; per memory-call timeout (default 8000)
  *
- * Loaded with:  pi --mode rpc -e <this file> --provider odysseus --model <id> ...
+ * The model provider is NOT configured here — Odysseus writes a per-session
+ * models.json (read via $PI_CODING_AGENT_DIR) and selects it with --provider,
+ * because pi resolves --provider before extension factories run.
+ *
+ * Loaded with:  pi --mode rpc -e <this file> --provider <models.json provider> ...
  */
 
 import type { BuildSystemPromptOptions, ExtensionAPI } from "@earendil-works/pi-coding-agent";
@@ -32,12 +35,10 @@ import { Type } from "typebox";
 
 const URL_BASE = (process.env.ODYSSEUS_URL ?? "").replace(/\/+$/, "");
 const TOKEN = process.env.ODYSSEUS_API_TOKEN ?? "";
-const MODEL_BASE = process.env.ODYSSEUS_MODEL_BASE_URL ?? "";
-const MODEL_ID = process.env.ODYSSEUS_MODEL_ID ?? "";
 const INJECT_K = Number(process.env.ODYSSEUS_MEMORY_INJECT_K ?? "6") || 6;
-const MODEL_CTX = Number(process.env.ODYSSEUS_MODEL_CONTEXT ?? "32768") || 32768;
-const MODEL_MAXTOK = Number(process.env.ODYSSEUS_MODEL_MAXTOKENS ?? "4096") || 4096;
-const MODEL_REASONING = (process.env.ODYSSEUS_MODEL_REASONING ?? "true") !== "false";
+// Hard cap on any single memory call so a slow/hung Odysseus can never block a
+// turn (before_agent_start runs every turn; a hang there stalls the whole agent).
+const FETCH_TIMEOUT_MS = Number(process.env.ODYSSEUS_FETCH_TIMEOUT_MS ?? "8000") || 8000;
 
 interface Memory {
 	text?: string;
@@ -50,14 +51,22 @@ async function odysseus(path: string, init?: RequestInit): Promise<any> {
 	if (!URL_BASE || !TOKEN) {
 		throw new Error("Odysseus bridge not configured (ODYSSEUS_URL / ODYSSEUS_API_TOKEN missing)");
 	}
-	const res = await fetch(`${URL_BASE}${path}`, {
-		...init,
-		headers: {
-			Authorization: `Bearer ${TOKEN}`,
-			"Content-Type": "application/json",
-			...(init?.headers ?? {}),
-		},
-	});
+	const ctrl = new AbortController();
+	const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
+	let res: Response;
+	try {
+		res = await fetch(`${URL_BASE}${path}`, {
+			...init,
+			signal: ctrl.signal,
+			headers: {
+				Authorization: `Bearer ${TOKEN}`,
+				"Content-Type": "application/json",
+				...(init?.headers ?? {}),
+			},
+		});
+	} finally {
+		clearTimeout(timer);
+	}
 	const body = await res.text();
 	if (!res.ok) {
 		// Surface the server's verdict verbatim (e.g. 403 scope denial) — the
@@ -89,30 +98,14 @@ const MEMORY_PARAMS = Type.Object({
 	),
 });
 
-export default async function odysseusBridge(pi: ExtensionAPI) {
-	// 1. Register the local model as a provider (only if Odysseus supplied one;
-	//    otherwise rely on whatever the user configured in models.json).
-	if (MODEL_BASE && MODEL_ID) {
-		pi.registerProvider("odysseus", {
-			name: "Odysseus (local)",
-			baseUrl: MODEL_BASE,
-			apiKey: "ollama", // local OpenAI-compatible servers ignore the key
-			api: "openai-completions",
-			models: [
-				{
-					id: MODEL_ID,
-					name: `${MODEL_ID} (Odysseus)`,
-					reasoning: MODEL_REASONING,
-					input: ["text"],
-					cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-					contextWindow: MODEL_CTX,
-					maxTokens: MODEL_MAXTOK,
-				},
-			],
-		});
-	}
+export default function odysseusBridge(pi: ExtensionAPI) {
+	// NOTE: the model PROVIDER is defined in the per-session models.json that
+	// Odysseus writes (read via $PI_CODING_AGENT_DIR), NOT here. pi resolves
+	// --provider at startup before extension factories run, so registering the
+	// provider from an extension yields "Unknown provider" in rpc mode. This
+	// extension owns memory only.
 
-	// 2. The memory tool — search + add, backed by the scoped API.
+	// 1. The memory tool — search + add, backed by the scoped API.
 	pi.registerTool({
 		name: "manage_memory",
 		label: "Memory",
@@ -161,7 +154,7 @@ export default async function odysseusBridge(pi: ExtensionAPI) {
 		},
 	});
 
-	// 3. Passive recall — inject the memories most relevant to this turn's
+	// 2. Passive recall — inject the memories most relevant to this turn's
 	//    prompt into the system prompt, so the agent "knows the user" without
 	//    having to explicitly search every time.
 	pi.on("before_agent_start", async (event) => {
