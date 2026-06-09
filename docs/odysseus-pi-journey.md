@@ -84,15 +84,20 @@ RESULT: PASS — cross-session memory works
 ### Test 3 — `pi_backend` live module test: ✅ PASS (after fixes)
 Drove `stream_pi_agent` with live event printing to localize a hang. After the two fixes below, it streamed correctly: `memory-search hit → delta "Hello" → metrics → persist(user+assistant) → [DONE]`.
 
-### Test 4 — Live-server HTTP path (the real production path): ⚠️ NOT YET CONFIRMED
-Driving the actual server (`uvicorn app:app`) over HTTP: real login → create session → `POST /api/chat_stream` with `mode=pi` → recall in a fresh session → verify via real `/api/memory`.
+### Test 4 — Live-server HTTP path (the real production path): ✅ PASS
+Driving the actual server (`uvicorn app:app` on :7070) over HTTP: real login → register endpoint → create session → `POST /api/chat_stream` with `mode=pi` → recall in a fresh session → verify via real `/api/memory`.
 
-Results so far:
-- ✅ **Login works** (`POST /api/auth/login` → 200).
-- ✅ **Session creation works.**
-- ❌ **`chat_stream` returned HTTP 400:** *"Selected model endpoint was removed. Pick another model in Settings."*
+```
+LOGIN: 200 (admin)   REGISTER ENDPOINT: 200 (ollama-local → gemma4:e4b, online)
+TURN 1 (session A, mode=pi): chat_stream 200 → tools ['manage_memory'] → REAL memory: ['My dog is named Rex.']
+TURN 2 (session B, FRESH, mode=pi): chat_stream 200 → "The name of your dog is Rex."
+login + session creation: OK | turn1 streamed via mode=pi: True | turn1 saved to REAL memory: True | turn2 recalled (fresh): True
+RESULT: PASS — live HTTP cross-session memory works
+```
 
-**This is not a pi-integration defect.** It is Odysseus's normal precondition (`_clear_orphaned_session_endpoint`, `routes/chat_routes.py`): a chat session's model must come from a **registered** model endpoint (Settings → endpoints), not an arbitrary URL. The 400 fires *before* the `mode=="pi"` branch is even reached. The fix is a one-step prerequisite — register the Ollama endpoint via `POST /api/model-endpoints` before creating the session — which had been written but **not yet run** when work was paused. So the end-to-end *production HTTP* path remains **unconfirmed**, blocked one configuration step short of the pi code.
+This exercised the full production path the offline test could not: the `chat_routes` `mode=="pi"` dispatch, the `require_admin` gate (real admin login), the in-process scoped-token mint, and the bridge calling the **live** `/api/codex/memory` (write in session A) and recall in a brand-new session B.
+
+*Resolved during this test:* the first attempt returned HTTP 400 — *"Selected model endpoint was removed"* — which is Odysseus's normal precondition (`_clear_orphaned_session_endpoint`) that a session's model come from a **registered** endpoint, not an arbitrary URL. It fired *before* the pi branch — not a pi-integration defect. Registering the Ollama endpoint via `POST /api/model-endpoints` first cleared it, and the run passed.
 
 ---
 
@@ -114,23 +119,25 @@ Two genuine integration bugs (both made the agent hang *before* any LLM call) pl
 
 ## 5. Are the goals met?
 
-**Short answer: the core capability is proven; the live production HTTP path is one configuration step from confirmation.**
+**Short answer: yes — the core goal is confirmed end-to-end, on the real server, against a local model.**
 
 | Goal | Status | Evidence |
 |---|---|---|
 | Local model drives pi's loop | ✅ Met | Test 1 (8 compactions, tool calls) |
-| pi embedded as Odysseus backend (`mode=pi`) | ✅ Built; ⚠️ live path unconfirmed | Code complete; Test 4 reached the dispatch but was blocked by endpoint pre-reg |
-| Memory bridge (read + write, scoped) | ✅ Met | Tests 2 & 3 |
-| **Cross-session "knows you"** (the heart of Gain #1) | ✅ **Met (offline, real model)** | Test 2 PASS |
-| Same behavior over the real HTTP server | ⚠️ **Not yet confirmed** | Test 4: login+session OK; chat blocked by unregistered endpoint |
+| pi embedded as Odysseus backend (`mode=pi`) | ✅ Met | Test 4 (live `chat_stream` 200 via the dispatch) |
+| Memory bridge (read + write, scoped) | ✅ Met | Tests 2, 3 & 4 |
+| **Cross-session "knows you"** (the heart of Gain #1) | ✅ **Met** | Test 2 (offline) **and Test 4 (live HTTP)** |
+| Same behavior over the real HTTP server | ✅ **Met** | Test 4 PASS (login → admin gate → token mint → live `/api/codex/memory`) |
 | Long-horizon continuity within one session (`--continue`) | ◻️ Coded, not specifically tested | Tests used separate sessions to isolate memory |
 | UI entry point (mode selector) | ◻️ Not built | v1 triggers `mode=pi` via the API |
 
 ### How the met goals were achieved
-The mechanism that makes "knows you across sessions" work, concretely: on every turn the bridge's `before_agent_start` handler queries Odysseus's ranked memory (`/api/codex/memory/search`) for the user's prompt and **prepends the results to pi's system prompt**; when the user states a durable fact, the agent calls `manage_memory(add)` which writes to Odysseus's store via the scoped token. Because memory lives in Odysseus (not in pi's per-session state), a brand-new pi session recalls it — proven in Test 2.
+The mechanism that makes "knows you across sessions" work, concretely: on every turn the bridge's `before_agent_start` handler queries Odysseus's ranked memory (`/api/codex/memory/search`) for the user's prompt and **prepends the results to pi's system prompt**; when the user states a durable fact, the agent calls `manage_memory(add)` which writes to Odysseus's store via the scoped token. Because memory lives in Odysseus (not in pi's per-session state), a brand-new pi session recalls it — proven offline (Test 2) and over the real server (Test 4). The live run additionally confirmed the production wiring: `chat_routes` `mode=="pi"` dispatch → `require_admin` → in-process scoped-token mint → bridge → live `/api/codex/memory`.
 
-### Why the remaining goal is not yet met
-The live HTTP path stopped at **Odysseus's own model-endpoint registration requirement**, not at any pi code. The session was created with a raw model URL; Odysseus requires a registered endpoint and rejects the chat with 400 before reaching the pi branch. The remediation (register the endpoint via `POST /api/model-endpoints`, then create the session against it) was prepared but not executed. Until that run completes, we have **not** observed the full production path (`chat_routes` dispatch → `require_admin` → in-process token mint → bridge → real `/api/codex/memory`) succeed end-to-end — even though each of those pieces has been individually validated.
+### What remains (out of v1 scope)
+- **`--continue` long-horizon within a single session** — coded but not specifically tested (the memory tests deliberately used *separate* sessions to isolate the memory path).
+- **A UI mode-selector** — v1 triggers the pi backend by sending `mode=pi` to `/api/chat_stream`; there is no web-UI toggle yet.
+- **Multi-user** — v1 is admin-only by design; per-user tokens and host-tool stripping would come next.
 
 ---
 
@@ -149,10 +156,10 @@ Why it was cheap enough to be worth it: both projects independently rejected hea
 
 ---
 
-## 7. Exactly where things stand & the next step
+## 7. Exactly where things stand
 
-- **Proven:** local-model viability, the memory bridge, and cross-session recall — end-to-end against the real model, offline (with a memory-API stub).
-- **One step remaining for full confidence:** run the live HTTP test after registering the Ollama endpoint in Odysseus (`POST /api/model-endpoints` → create session against it → `mode=pi`). This exercises the real `chat_routes` dispatch, admin gate, token mint, and the live `/api/codex/memory` round-trip.
-- **Deferred (out of v1 scope):** a UI mode-selector; explicit `--continue` long-horizon test; multi-user (per-user tokens, host-tool stripping).
+- **Confirmed end-to-end:** local-model viability, the memory bridge, and cross-session recall — both offline (Test 2) and over the **live server** (Test 4: real login → admin gate → scoped-token mint → live `/api/codex/memory`). All four planned tests pass.
+- **Operational prerequisite (documented):** a pi session's model must come from a **registered** Odysseus endpoint (`POST /api/model-endpoints`) before `mode=pi` will run — standard Odysseus behavior, not specific to this integration.
+- **Deferred (out of v1 scope):** a UI mode-selector; an explicit `--continue` long-horizon test; multi-user (per-user tokens, host-tool stripping).
 
-**Bottom line:** We set out to make Odysseus and pi into a personal agent that runs long *and* remembers you. That capability is built and demonstrated against your real local model; the only thing not yet observed is the same success over the live web server, which is gated by a standard Odysseus endpoint-registration step rather than by the integration itself.
+**Bottom line:** We set out to make Odysseus and pi into a personal agent that runs long *and* remembers you. That capability is now **built and demonstrated end-to-end on the real server** against a local model (`gemma4:e4b`): a fact recorded in one chat session is recalled in a brand-new session, through Odysseus's real auth, scoped tokens, and memory store. Gain #1 is met.

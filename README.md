@@ -13,13 +13,15 @@ Odysseus has persistent memory and your data but a shallow agent loop (≤50 rou
 | Phase 0 — can a small local model drive pi's tool loop? | ✅ tool calls + recall across **8 compaction cycles** |
 | Offline cross-session memory (record in session A → recall in fresh session B) | ✅ **PASS** — recalled purely via memory injection |
 | `pi_backend` module (real model, live event stream) | ✅ PASS (after fixing 2 integration bugs) |
-| Live-server HTTP path (`mode=pi` over the real server) | ⚠️ login + session OK; one config step (endpoint registration) short of full confirmation |
+| Live-server HTTP path (`mode=pi` over the real server) | ✅ **PASS** — record in session A, recall in a fresh session B, through real login + admin gate + scoped token + live `/api/codex/memory` |
+
+All four tests pass: **Gain #1 is confirmed end-to-end on the real server** — a fact the agent recorded in one chat session is recalled in a brand-new session, on a local model.
 
 **What we gain (and the honest caveat).** A durable, personal agent neither tool has alone; one shared local-model pool; and a trust boundary around an otherwise permissionless agent. Cost: ~5 files of glue and two bugs that only an end-to-end run surfaced (provider load-order; `DETACHED_PROCESS` breaking subprocess pipes). Worth it **only** for the personal/long-horizon use case — for terminal coding alone, pi by itself is better.
 
 **Read the full story:** [`docs/odysseus-pi-journey.md`](docs/odysseus-pi-journey.md) (goals, tests, what's met and what isn't) · [`docs/odysseus-pi-integration-assessment.md`](docs/odysseus-pi-integration-assessment.md) (analysis + role contract) · [`integrations/pi/README.md`](integrations/pi/README.md) (how to run it).
 
-> ⚠️ Experimental and not production-validated end-to-end. The pi backend is admin-only and triggered by sending `mode=pi` to `/api/chat_stream` (no UI selector yet).
+> Experimental. The pi backend is **admin-only** and triggered by sending `mode=pi` to `/api/chat_stream` (no UI selector yet). Validated on the local dev server with `gemma4:e4b`/Ollama.
 
 ---
 
