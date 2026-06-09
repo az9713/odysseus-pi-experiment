@@ -255,13 +255,22 @@ async def stream_pi_agent(
                  tool_events, model_id, incognito)
         yield "data: [DONE]\n\n"
 
-    except asyncio.CancelledError:
-        # Stream cancelled (user hit stop). Abort pi and persist the partial.
+    except (asyncio.CancelledError, GeneratorExit):
+        # Stream cancelled (user hit stop) — agent_runs cancels the drain task,
+        # whose aclose() throws GeneratorExit in here. Abort pi, save the partial.
         _send({"type": "abort"})
         _persist(sess, session_manager, message, "".join(assistant_text),
                  tool_events, model_id, incognito, partial=True)
         raise
     finally:
+        # Close stdin first so pi can exit cleanly (it appends to the session
+        # JSONL during the turn, so a subsequent force-kill won't lose data),
+        # then ensure no orphaned process tree is left behind.
+        try:
+            if proc.stdin and not proc.stdin.closed:
+                proc.stdin.close()
+        except Exception:
+            pass
         try:
             kill_process_tree(proc.pid)
         except Exception:
